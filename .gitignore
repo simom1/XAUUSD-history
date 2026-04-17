@@ -1,0 +1,12 @@
+*.py
+*.bat
+*.md
+*.html
+*.json
+*.log
+*.db
+*.ini
+*.txt
+*.conf
+bat*/
+metatrader_tools/
