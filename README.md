@@ -51,43 +51,74 @@ time,open,high,low,close,tick_volume
 
 ## 品种列表
 
-所有的 MT5 历史行情数据都包含从 **M1 到 W1** 8 个不同的周期，文件保存在对应品种的文件夹中。
+所有的 MT5 历史行情数据按品种分类保存在子目录下。每个子目录均包含 8 个周期的 CSV 文件，文件路径为 `{品种代码}/{品种代码}_{时间周期}.csv`。
 
 ### 贵金属 (Precious Metals)
-- **XAUUSD** (黄金 / 美元)
-- **XAGUSD** (白银 / 美元)
-- **XPTUSD** (铂金 / 美元)
+- [XAUUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAUUSD) (黄金 / 美元)
+- [XAGUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAGUSD) (白银 / 美元)
+- [XPTUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XPTUSD) (铂金 / 美元 - **新增**)
+
+### 股指 (Stock Indices - 全新新增)
+- [NAS100](file:///Users/Zhuanz/Downloads/XAUUSD-history/NAS100) (纳斯达克 100)
+- [SPX500](file:///Users/Zhuanz/Downloads/XAUUSD-history/SPX500) (标普 500，映射自 EXNESS 的 `US500`)
+- [US30](file:///Users/Zhuanz/Downloads/XAUUSD-history/US30) (道琼斯 30)
+- [UK100](file:///Users/Zhuanz/Downloads/XAUUSD-history/UK100) (富时 100)
+
+### 加密货币 (Cryptocurrency - 全新新增)
+- [BTCUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/BTCUSD) (比特币 / 美元)
+- [ETHUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/ETHUSD) (以太坊 / 美元)
+- [SOLUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/SOLUSD) (索拉纳 / 美元)
+- [XRPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XRPUSD) (瑞波币 / 美元)
+
+### 能源/商品 (Energy/Commodities)
+- [UKOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/UKOIL) (布伦特原油)
+- [USOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/USOIL) (WTI 原油)
 
 ### 外汇主要货币对 (Forex Majors)
-- **EURUSD** (欧元 / 美元)
-- **GBPUSD** (英镑 / 美元)
-- **USDJPY** (美元 / 日元)
-- **USDCHF** (美元 / 瑞郎)
-- **AUDUSD** (澳元 / 美元)
-- **NZDUSD** (纽元 / 美元)
-- **USDCAD** (美元 / 加元)
+- [EURUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/EURUSD) (欧元 / 美元)
+- [GBPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/GBPUSD) (英镑 / 美元)
+- [USDJPY](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDJPY) (美元 / 日元)
+- [USDCHF](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCHF) (美元 / 瑞郎)
+- [AUDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/AUDUSD) (澳元 / 美元)
+- [NZDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/NZDUSD) (纽元 / 美元)
+- [USDCAD](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCAD) (美元 / 加元)
 
-### 股指 (Stock Indices)
-- **NAS100** (纳斯达克 100)
-- **SPX500** (标普 500)
-- **US30** (道琼斯 30)
-- **UK100** (富时 100)
+---
 
-### 原油/商品 (Energy/Commodities)
-- **UKOIL** (布伦特原油)
-- **USOIL** (WTI 原油)
+## 快速开始（Python）
 
-### 加密货币 (Cryptocurrency)
-- **BTCUSD** (比特币 / 美元)
-- **ETHUSD** (以太坊 / 美元)
-- **SOLUSD** (索拉纳 / 美元)
-- **XRPUSD** (瑞波币 / 美元)
+```python
+import pandas as pd
+
+# 读取黄金 H1 数据
+df = pd.read_csv("XAUUSD/XAUUSD_H1.csv", parse_dates=["time"], index_col="time")
+
+print(df.head())
+print(f"总行数：{len(df)}")
+print(f"时间范围：{df.index.min()} → {df.index.max()}")
+```
+
+---
+
+## 注意事项
+
+- 数据由 **MetaTrader 5** Python 接口导出
+- 包含从 **M1 到 W1** 8 个不同的时间周期，每行代表该周期的开盘行情
+- `tick_volume` 为 Tick 计数，非真实成交量，是外汇市场常用的成交量代理指标
+- 部分品种行数较少，受限于券商历史数据深度
+- 所有时间戳均为 **UTC**
+
+---
+
+## 相关项目
+
+本数据集是 **SINERGY ML BOT** 项目的基础数据，该项目是一个基于机器学习的多品种量化交易系统，使用 H1 多品种数据进行信号生成与回测。
 
 ---
 
 ## TradingView 深度历史数据集 (多周期)
 
-本仓库在 `TradingView_Deep_Datasets` 目录下还收录了来自 TradingView 的深层历史数据集。与根目录下的单周期（H1）数据不同，这些数据集包含了从 **1分钟（M1）到月线（Monthly）** 的完整多周期数据，包括 CSV 和 JSON 格式。
+本仓库在 [TradingView_Deep_Datasets](file:///Users/Zhuanz/Downloads/XAUUSD-history/TradingView_Deep_Datasets) 目录下还收录了来自 TradingView 的深层历史数据集。与根目录下的单周期（H1）数据不同，这些数据集包含了从 **1分钟（M1）到月线（Monthly）** 的完整多周期数据，包括 CSV 和 JSON 格式。
 
 ### 支持品种及周期
 
@@ -112,34 +143,3 @@ time,open,high,low,close,tick_volume
 | 目录 | 品种 | 来源 | 包含周期 |
 |---|---|---|---|
 | `OANDA_XAUUSD` | 黄金 / 美元 (Gold / USD) | Oanda | 1, 5, 15, 30, 60, 240, D, W, M |
-
----
-
-## 快速开始（Python）
-
-```python
-import pandas as pd
-
-# 读取黄金数据
-df = pd.read_csv("XAUUSD_H1.csv", parse_dates=["time"], index_col="time")
-
-print(df.head())
-print(f"总行数：{len(df)}")
-print(f"时间范围：{df.index.min()} → {df.index.max()}")
-```
-
----
-
-## 注意事项
-
-- 数据由 **MetaTrader 5** Python 接口导出
-- 时间周期为 **H1**，每行代表 1 小时
-- `tick_volume` 为 Tick 计数，非真实成交量，是外汇市场常用的成交量代理指标
-- 部分品种行数较少，受限于券商历史数据深度
-- 所有时间戳均为 **UTC**
-
----
-
-## 相关项目
-
-本数据集是 **SINERGY ML BOT** 项目的基础数据，该项目是一个基于机器学习的多品种量化交易系统，使用 H1 多品种数据进行信号生成与回测。
