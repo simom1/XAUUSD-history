@@ -75,6 +75,36 @@ time,open,high,low,close,tick_volume
 
 ---
 
+## TradingView Deep Historical Datasets (Multi-Timeframe)
+
+The repository also includes deep historical datasets from TradingView under the `TradingView_Deep_Datasets` folder. Unlike the single-timeframe (H1) MT5 data in the root directory, these datasets provide comprehensive multi-timeframe coverage from **1-minute (M1) up to Monthly**, available in both CSV and JSON formats.
+
+### Supported Instruments & Timeframes
+
+- **Available Timeframes**: 1-minute (`1`), 5-minute (`5`), 15-minute (`15`), 30-minute (`30`), 1-hour (`60`), 4-hour (`240`), Daily (`D`), Weekly (`W`), Monthly (`M`).
+- **File Naming Convention**: `TradingView_Deep_Datasets/{SYMBOL}/{SYMBOL}_{TIMEFRAME}.csv` (and `.json`)
+
+#### 1. Stock Indices
+| Directory | Index Name | Source | Timeframes |
+|---|---|---|---|
+| `TVC_SPX` | S&P 500 Index | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+| `TVC_NDX` | Nasdaq 100 Index | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+| `TVC_DJI` | Dow Jones Industrial Average | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+| `TVC_RUT` | Russell 2000 Index | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+
+#### 2. Cryptocurrency
+| Directory | Trading Pair | Source | Timeframes |
+|---|---|---|---|
+| `BINANCE_BTCUSDT` | Bitcoin / USDT (BTC/USDT) | Binance | 1, 5, 15, 30, 60, 240, D, W, M |
+| `BINANCE_ETHUSDT` | Ethereum / USDT (ETH/USDT) | Binance | 1, 5, 15, 30, 60, 240, D, W, M |
+
+#### 3. Precious Metals
+| Directory | Symbol | Source | Timeframes |
+|---|---|---|---|
+| `OANDA_XAUUSD` | Gold / USD | Oanda | 1, 5, 15, 30, 60, 240, D, W, M |
+
+---
+
 ## Quick Start (Python)
 
 ```python

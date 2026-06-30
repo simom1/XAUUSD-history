@@ -75,6 +75,36 @@ time,open,high,low,close,tick_volume
 
 ---
 
+## TradingView 深度历史数据集 (多周期)
+
+本仓库在 `TradingView_Deep_Datasets` 目录下还收录了来自 TradingView 的深层历史数据集。与根目录下的单周期（H1）数据不同，这些数据集包含了从 **1分钟（M1）到月线（Monthly）** 的完整多周期数据，包括 CSV 和 JSON 格式。
+
+### 支持品种及周期
+
+- **数据周期**：1分钟 (`1`)、5分钟 (`5`)、15分钟 (`15`)、30分钟 (`30`)、1小时 (`60`)、4小时 (`240`)、日线 (`D`)、周线 (`W`)、月线 (`M`)。
+- **文件命名规则**：`TradingView_Deep_Datasets/{代码}/{代码}_{周期}.csv` (和 `.json`)
+
+#### 1. 股指 (Stock Indices)
+| 目录 | 指数名称 | 来源 | 包含周期 |
+|---|---|---|---|
+| `TVC_SPX` | 标普 500 指数 (S&P 500) | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+| `TVC_NDX` | 纳斯达克 100 指数 (Nasdaq 100) | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+| `TVC_DJI` | 道琼斯工业指数 (Dow Jones) | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+| `TVC_RUT` | 罗素 2000 指数 (Russell 2000) | TVC | 1, 5, 15, 30, 60, 240, D, W, M |
+
+#### 2. 加密货币 (Cryptocurrency)
+| 目录 | 交易对 | 来源 | 包含周期 |
+|---|---|---|---|
+| `BINANCE_BTCUSDT` | 比特币 / 泰达币 (BTC/USDT) | Binance | 1, 5, 15, 30, 60, 240, D, W, M |
+| `BINANCE_ETHUSDT` | 以太坊 / 泰达币 (ETH/USDT) | Binance | 1, 5, 15, 30, 60, 240, D, W, M |
+
+#### 3. 贵金属 (Precious Metals)
+| 目录 | 品种 | 来源 | 包含周期 |
+|---|---|---|---|
+| `OANDA_XAUUSD` | 黄金 / 美元 (Gold / USD) | Oanda | 1, 5, 15, 30, 60, 240, D, W, M |
+
+---
+
 ## 快速开始（Python）
 
 ```python
