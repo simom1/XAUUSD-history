@@ -6,13 +6,28 @@
 
 ## Overview
 
-This repository contains historical OHLCV price data for **17 financial instruments** at the **H1 (1-hour)** timeframe, exported from MetaTrader 5. Data spans from as early as 2007 up to April 2026, with over **1.1 million rows** in total.
+This repository contains historical OHLCV price data for **20 major financial instruments** across multiple timeframes (M1 to W1), exported from MetaTrader 5. Data spans from as early as 2007, gets updated daily, and currently contains over **4 million rows** in total.
 
 ---
 
 ## File Structure
 
-Each file follows the naming convention: `{SYMBOL}_H1.csv`
+Files are organized by instrument, where each instrument has its own folder containing 8 different timeframes:
+- Directory naming: `{SYMBOL}/`
+- File naming convention: `{SYMBOL}/{SYMBOL}_{TIMEFRAME}.csv`
+
+### Supported Timeframes
+
+| Code | Timeframe | Description |
+|---|---|---|
+| `M1` | 1 Minute | 1-minute bar |
+| `M5` | 5 Minutes | 5-minute bar |
+| `M15` | 15 Minutes | 15-minute bar |
+| `M30` | 30 Minutes | 30-minute bar |
+| `H1` | 1 Hour | 1-hour bar |
+| `H4` | 4 Hours | 4-hour bar |
+| `D1` | Daily | Daily bar |
+| `W1` | Weekly | Weekly bar |
 
 ### Columns
 
@@ -36,42 +51,37 @@ time,open,high,low,close,tick_volume
 
 ## Instruments
 
-### Precious Metals
+All MT5 historical market data includes 8 timeframes (from M1 to W1) stored inside their respective instrument folders.
 
-| File | Symbol | Rows | From | To |
-|---|---|---|---|---|
-| `XAUUSD_H1.csv` | Gold / USD | 50,718 | 2007-06-22 | 2026-04-17 |
-| `XAGUSD_H1.csv` | Silver / USD | 26,025 | — | 2026-04-17 |
+### Precious Metals
+- **XAUUSD** (Gold / USD)
+- **XAGUSD** (Silver / USD)
+- **XPTUSD** (Platinum / USD)
 
 ### Forex — Majors
+- **EURUSD** (EUR / USD)
+- **GBPUSD** (GBP / USD)
+- **USDJPY** (USD / JPY)
+- **USDCHF** (USD / CHF)
+- **AUDUSD** (AUD / USD)
+- **NZDUSD** (NZD / USD)
+- **USDCAD** (USD / CAD)
 
-| File | Symbol | Rows | To |
-|---|---|---|---|
-| `EURUSD_H1.csv` | EUR / USD | 100,000 | 2026-04-17 |
-| `GBPUSD_H1.csv` | GBP / USD | 100,000 | 2026-04-17 |
-| `AUDUSD_H1.csv` | AUD / USD | 100,000 | 2026-04-17 |
-| `NZDUSD_H1.csv` | NZD / USD | 21,181 | 2026-04-17 |
-| `USDCAD_H1.csv` | USD / CAD | 88,774 | 2026-04-17 |
-| `USDCHF_H1.csv` | USD / CHF | 100,000 | 2026-04-17 |
-| `USDJPY_H1.csv` | USD / JPY | 100,000 | 2026-04-17 |
+### Stock Indices
+- **NAS100** (Nasdaq 100)
+- **SPX500** (S&P 500)
+- **US30** (Dow Jones 30)
+- **UK100** (FTSE 100)
 
-### Forex — Crosses
+### Commodities (Energy)
+- **UKOIL** (Brent Crude Oil)
+- **USOIL** (WTI Crude Oil)
 
-| File | Symbol | Rows | To |
-|---|---|---|---|
-| `EURJPY_H1.csv` | EUR / JPY | 8,725 | 2026-04-17 |
-| `EURGBP_H1.csv` | EUR / GBP | 100,000 | 2026-04-17 |
-| `EURAUD_H1.csv` | EUR / AUD | 14,965 | 2026-04-17 |
-| `GBPJPY_H1.csv` | GBP / JPY | 100,000 | 2026-04-17 |
-| `GBPAUD_H1.csv` | GBP / AUD | 100,000 | 2026-04-17 |
-| `AUDJPY_H1.csv` | AUD / JPY | 100,000 | 2026-04-17 |
-
-### Commodities (Oil)
-
-| File | Symbol | Rows | To |
-|---|---|---|---|
-| `UKOIL_H1.csv` | Brent Crude Oil | 18,734 | 2026-04-17 |
-| `USOIL_H1.csv` | WTI Crude Oil | 8,281 | 2026-04-17 |
+### Cryptocurrency
+- **BTCUSD** (Bitcoin / USD)
+- **ETHUSD** (Ethereum / USD)
+- **SOLUSD** (Solana / USD)
+- **XRPUSD** (Ripple / USD)
 
 ---
 
