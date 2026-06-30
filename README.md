@@ -53,35 +53,15 @@ time,open,high,low,close,tick_volume
 
 所有的 MT5 历史行情数据按品种分类保存在子目录下。每个子目录均包含 8 个周期的 CSV 文件，文件路径为 `{品种代码}/{品种代码}_{时间周期}.csv`。
 
-### 贵金属 (Precious Metals)
-- [XAUUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAUUSD) (黄金 / 美元)
-- [XAGUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAGUSD) (白银 / 美元)
-- [XPTUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XPTUSD) (铂金 / 美元 - **新增**)
-
-### 股指 (Stock Indices - 全新新增)
-- [NAS100](file:///Users/Zhuanz/Downloads/XAUUSD-history/NAS100) (纳斯达克 100)
-- [SPX500](file:///Users/Zhuanz/Downloads/XAUUSD-history/SPX500) (标普 500，映射自 EXNESS 的 `US500`)
-- [US30](file:///Users/Zhuanz/Downloads/XAUUSD-history/US30) (道琼斯 30)
-- [UK100](file:///Users/Zhuanz/Downloads/XAUUSD-history/UK100) (富时 100)
-
-### 加密货币 (Cryptocurrency - 全新新增)
-- [BTCUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/BTCUSD) (比特币 / 美元)
-- [ETHUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/ETHUSD) (以太坊 / 美元)
-- [SOLUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/SOLUSD) (索拉纳 / 美元)
-- [XRPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XRPUSD) (瑞波币 / 美元)
-
-### 能源/商品 (Energy/Commodities)
-- [UKOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/UKOIL) (布伦特原油)
-- [USOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/USOIL) (WTI 原油)
-
-### 外汇主要货币对 (Forex Majors)
-- [EURUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/EURUSD) (欧元 / 美元)
-- [GBPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/GBPUSD) (英镑 / 美元)
-- [USDJPY](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDJPY) (美元 / 日元)
-- [USDCHF](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCHF) (美元 / 瑞郎)
-- [AUDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/AUDUSD) (澳元 / 美元)
-- [NZDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/NZDUSD) (纽元 / 美元)
-- [USDCAD](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCAD) (美元 / 加元)
+| 贵金属 (Precious Metals) | 股指 (Stock Indices - 新增) | 加密货币 (Cryptocurrency - 新增) | 能源/商品 (Energy/Commodities) | 外汇主要货币对 (Forex Majors) |
+| :--- | :--- | :--- | :--- | :--- |
+| • [XAUUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAUUSD) (黄金) | • [NAS100](file:///Users/Zhuanz/Downloads/XAUUSD-history/NAS100) (纳指100) | • [BTCUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/BTCUSD) (比特币) | • [UKOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/UKOIL) (布伦特原油) | • [EURUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/EURUSD) (欧元/美元) |
+| • [XAGUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAGUSD) (白银) | • [SPX500](file:///Users/Zhuanz/Downloads/XAUUSD-history/SPX500) (标普500) | • [ETHUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/ETHUSD) (以太坊) | • [USOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/USOIL) (WTI原油) | • [GBPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/GBPUSD) (英镑/美元) |
+| • [XPTUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XPTUSD) (铂金) | • [US30](file:///Users/Zhuanz/Downloads/XAUUSD-history/US30) (道琼斯30) | • [SOLUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/SOLUSD) (索拉纳) | | • [USDJPY](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDJPY) (美元/日元) |
+| | • [UK100](file:///Users/Zhuanz/Downloads/XAUUSD-history/UK100) (富时100) | • [XRPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XRPUSD) (瑞波币) | | • [USDCHF](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCHF) (美元/瑞郎) |
+| | | | | • [AUDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/AUDUSD) (澳元/美元) |
+| | | | | • [NZDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/NZDUSD) (纽元/美元) |
+| | | | | • [USDCAD](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCAD) (美元/加元) |
 
 ---
 

@@ -53,35 +53,15 @@ time,open,high,low,close,tick_volume
 
 All MT5 historical market data is saved inside subdirectories categorized by symbol. Each folder contains 8 CSV files for different timeframes, located at `{SYMBOL}/{SYMBOL}_{TIMEFRAME}.csv`.
 
-### Precious Metals
-- [XAUUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAUUSD) (Gold / USD)
-- [XAGUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAGUSD) (Silver / USD)
-- [XPTUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XPTUSD) (Platinum / USD - **New**)
-
-### Stock Indices (New)
-- [NAS100](file:///Users/Zhuanz/Downloads/XAUUSD-history/NAS100) (Nasdaq 100)
-- [SPX500](file:///Users/Zhuanz/Downloads/XAUUSD-history/SPX500) (S&P 500, mapped to `US500` on EXNESS)
-- [US30](file:///Users/Zhuanz/Downloads/XAUUSD-history/US30) (Dow Jones 30)
-- [UK100](file:///Users/Zhuanz/Downloads/XAUUSD-history/UK100) (FTSE 100)
-
-### Cryptocurrency (New)
-- [BTCUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/BTCUSD) (Bitcoin / USD)
-- [ETHUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/ETHUSD) (Ethereum / USD)
-- [SOLUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/SOLUSD) (Solana / USD)
-- [XRPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XRPUSD) (Ripple / USD)
-
-### Commodities (Energy)
-- [UKOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/UKOIL) (Brent Crude Oil)
-- [USOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/USOIL) (WTI Crude Oil)
-
-### Forex — Majors
-- [EURUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/EURUSD) (EUR / USD)
-- [GBPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/GBPUSD) (GBP / USD)
-- [USDJPY](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDJPY) (USD / JPY)
-- [USDCHF](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCHF) (USD / CHF)
-- [AUDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/AUDUSD) (AUD / USD)
-- [NZDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/NZDUSD) (NZD / USD)
-- [USDCAD](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCAD) (USD / CAD)
+| Precious Metals | Stock Indices (New) | Cryptocurrency (New) | Energy/Commodities | Forex — Majors |
+| :--- | :--- | :--- | :--- | :--- |
+| • [XAUUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAUUSD) (Gold) | • [NAS100](file:///Users/Zhuanz/Downloads/XAUUSD-history/NAS100) (Nasdaq 100) | • [BTCUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/BTCUSD) (Bitcoin) | • [UKOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/UKOIL) (Brent Crude) | • [EURUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/EURUSD) (EUR/USD) |
+| • [XAGUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XAGUSD) (Silver) | • [SPX500](file:///Users/Zhuanz/Downloads/XAUUSD-history/SPX500) (S&P 500) | • [ETHUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/ETHUSD) (Ethereum) | • [USOIL](file:///Users/Zhuanz/Downloads/XAUUSD-history/USOIL) (WTI Crude) | • [GBPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/GBPUSD) (GBP/USD) |
+| • [XPTUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XPTUSD) (Platinum) | • [US30](file:///Users/Zhuanz/Downloads/XAUUSD-history/US30) (Dow 30) | • [SOLUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/SOLUSD) (Solana) | | • [USDJPY](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDJPY) (USD/JPY) |
+| | • [UK100](file:///Users/Zhuanz/Downloads/XAUUSD-history/UK100) (FTSE 100) | • [XRPUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/XRPUSD) (Ripple) | | • [USDCHF](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCHF) (USD/CHF) |
+| | | | | • [AUDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/AUDUSD) (AUD/USD) |
+| | | | | • [NZDUSD](file:///Users/Zhuanz/Downloads/XAUUSD-history/NZDUSD) (NZD/USD) |
+| | | | | • [USDCAD](file:///Users/Zhuanz/Downloads/XAUUSD-history/USDCAD) (USD/CAD) |
 
 ---
 
