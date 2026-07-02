@@ -1,0 +1,38 @@
+@echo off
+setlocal
+
+set GIT=C:\Users\Administrator\Desktop\cmder\vendor\git-for-windows\cmd\git.exe
+set DIR=%~dp0
+set PYTHON=python
+
+echo [%DATE% %TIME%] START
+
+echo Fetching MT5 data...
+"%PYTHON%" "%DIR%fetch_mt5_data.py"
+if errorlevel 1 goto fail
+
+cd /d "%DIR%"
+
+"%GIT%" add -A
+
+"%GIT%" diff --cached --quiet
+if not errorlevel 1 goto nochange
+
+for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set DT=%%I
+"%GIT%" commit -m "data: update %DT:~0,4%-%DT:~4,2%-%DT:~6,2%"
+"%GIT%" pull origin main --rebase
+"%GIT%" push origin main
+if errorlevel 1 goto fail
+echo [OK] pushed successfully
+goto end
+
+:nochange
+echo [INFO] no changes
+goto end
+
+:fail
+echo [ERROR] failed
+
+:end
+echo [%DATE% %TIME%] END
+endlocal
