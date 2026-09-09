@@ -60,30 +60,39 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 > ≈ $58k/year of friction on $100k capital. Any intraday edge must clear this
 > bar first — which is exactly what the feature-screening step measures.
 
-### Backtest Framework (event-driven, cost-aware)
+### Factor Screening & Walk-Forward Research
 
 | | |
 |---|---|
-| Engine | [`backtest/engine.py`](backtest/engine.py) — signal at bar close → fill at **next bar open**; SL/TP checked intrabar (stop-first on ties); daily flat 20:55 UTC (Fri 20:45) |
-| Costs | **$0.16 /oz round-trip all-in** (spread + slippage + commission, Gate.io actual) → $0.08 per side |
-| Validation | synthetic PnL hand-checks + no-lookahead **prefix-consistency check** (truncated-history replay must be bit-identical) |
-| Runner | [`scripts/run_backtest.py`](scripts/run_backtest.py) |
+| Stage 1 — IC + grid | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — Spearman IC with monthly Newey-West t-stats over all 64 indicators, then a per-factor z-score grid (window W × threshold T × hold H) with IS/OOS 70/30 split and the $16/trade cost gate |
+| Stage 2 — combos + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — **one-sided** re-test + pairwise AND combos, ranked by 4-fold walk-forward (expanding train, 6-month test windows); the final 6 months (2026-03-10 → 2026-09-09) are **sealed as an untouchable holdout** |
+| Reports | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
+
+**Locked candidate (engine-verified, replay delta $0.00)** — research slice 2023-09 → 2026-03:
+
+| spec | side | res Sharpe | avg $/trade | trades | res maxDD |
+|---|---|---:|---:|---:|---:|
+| `plus_di_14` · W6048 · z>+1.5 · hold 120 bars (10h) | long | **2.51** | +$293 | 906 | −$27.9k |
+
+All 4 walk-forward folds positive (test PnL +$2.5k / +$39k / +$75k / +$139k, Sharpe 0.18 → 3.69).
+Full-pool WF simulation (540 configs, re-picked each fold by train Sharpe): Sharpe 0.69, avg +$271/trade.
+
+**Findings / honest lessons:**
+
+- The Stage-1 grid ran **two-sided** configs (long at z>+T *and* short at z<−T). Stage-2's
+  one-sided decomposition corrects the attribution: `plus_di`'s long leg (+$160k research)
+  was masked by its losing short leg in the both-side config; `aroon`'s Stage-1 profit came
+  mostly from its **short** leg; `gap_pct`'s profit is all in its long leg.
+- Pairwise combos are **redundant**: `aroon ∧ plus_di` at T=1.25 keeps 89–96% of the
+  plus_di-only trades at slightly lower Sharpe; at T=1.5 the overlap collapses to <6%.
+- Exploratory (not locked): `aroon_up_25` short (z<−1.5, W6048) — res Sharpe 1.42,
+  +$724/trade, 170 trades, positive in all 4 folds.
+
+Judgement day — run the locked spec against the sealed holdout **once**, after research is frozen:
 
 ```bash
-python scripts/run_backtest.py --strategy ema_cross_9_21 --save
-python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
+python scripts/run_combo_matrix.py --final
 ```
-
-**Baseline results (2023-09 → 2026-09, fixed 100 oz, $100k start):**
-
-| strategy | return | Sharpe | PF | win rate | trades | friction paid |
-|---|---:|---:|---:|---:|---:|---:|
-| EMA cross 9/21 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
-| Donchian breakout 20 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
-
-> Key lesson: at 100 oz each round trip costs **$16** → 10 trades/day ≈ $160/day
-> ≈ $58k/year of friction on $100k capital. Any intraday edge must clear this
-> bar first — which is exactly what the feature-screening step measures.
 
 ### Quick Start
 
@@ -101,6 +110,12 @@ python analysis/quant_analysis.py
 
 # run a validated baseline backtest (cost-aware)
 python scripts/run_backtest.py --strategy ema_cross_9_21 --save
+
+# stage 1: IC screen + per-factor grid (IS/OOS 70/30)
+python scripts/run_screening.py
+
+# stage 2: one-sided combos + 4-fold walk-forward (seals the last 6 months)
+python scripts/run_combo_matrix.py
 ```
 
 ### Key Findings (daily-resolution study, 2020–2026, full report in [`report/`](report/quant_analysis_report.html))
@@ -130,11 +145,16 @@ python scripts/run_backtest.py --strategy ema_cross_9_21 --save
 ├── analysis/indicators_library.py    # 64-indicator library (pure pandas/numpy)
 ├── analysis/build_indicators.py  # builds & validates the indicator dataset
 ├── analysis/quant_analysis.py    # stats + interactive HTML report generator
+├── analysis/data_quality.py      # holiday / dead-bar QC (report/data_quality_5m.md)
+├── analysis/factor_screening.py  # IC + grid machinery (fast engine-calibrated accounting)
+├── analysis/combo_screening.py   # one-sided combos + walk-forward engine
 ├── backtest/                     # event-driven backtest engine
 │   ├── engine.py · config.py · metrics.py · validate.py
 ├── strategies/baseline.py        # ema_cross_9_21, donchian_breakout_20
 ├── scripts/run_backtest.py       # backtest runner (validated)
-└── report/quant_analysis_report.html + backtest_*.md
+├── scripts/run_screening.py      # stage-1 runner (IC + grid)
+├── scripts/run_combo_matrix.py   # stage-2 runner (walk-forward + sealed holdout)
+└── report/quant_analysis_report.html + backtest_*.md + factor_screening.md + combo_matrix.md
 ```
 
 ### Data Availability by Timeframe (Gate.io TradFi, probed 2026-09-09)
@@ -204,28 +224,34 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 
 > 关键教训:100盎司下每笔往返成本**$16** → 每天10笔 ≈ $160/天 ≈ 每年$58k(本金$100k)。日内策略的边际收益必须先跨过这道门槛——这正是下一步特征筛选要量化的东西。
 
-### 回测框架(事件驱动、计入真实成本)
+### 因子筛选与 Walk-Forward 研究
 
 | | |
 |---|---|
-| 引擎 | [`backtest/engine.py`](backtest/engine.py) — 信号在bar收盘产生 → **下一根bar开盘价成交**;SL/TP盘中按高低点触发(双触发时止损优先);每日20:55 UTC强平(周五20:45) |
-| 成本 | **$0.16/oz 全包往返**(点差+滑点+佣金,Gate.io实际) → 每边$0.08 |
-| 验证 | 合成盈亏手工对账 + **无前视一致性检查**(截断历史重放,权益路径逐位一致) |
-| 运行 | [`scripts/run_backtest.py`](scripts/run_backtest.py) |
+| 第一阶段 — IC + 网格 | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — 64个指标的 Spearman IC(月度 Newey-West t 检验)+ 单因子 z 分数网格(窗口 W × 阈值 T × 持仓 H),IS/OOS 七三分割,$16/笔成本门槛 |
+| 第二阶段 — 组合 + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — **单边**复测 + 两两 AND 组合,按 4 折 walk-forward(扩张训练窗、6个月测试窗)排序;最后6个月(2026-03-10 → 2026-09-09)**封存为终审数据,研究期间禁止触碰** |
+| 报告 | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
+
+**锁定候选(引擎逐笔复核,重放误差 $0.00)** — 研究切片 2023-09 → 2026-03:
+
+| 规格 | 方向 | 研究Sharpe | 均$/笔 | 笔数 | 研究最大回撤 |
+|---|---|---:|---:|---:|---:|
+| `plus_di_14` · W6048 · z>+1.5 · 持仓120根(10小时) | 做多 | **2.51** | +$293 | 906 | −$27.9k |
+
+4 折 walk-forward 全部为正(测试PnL +$2.5k / +$39k / +$75k / +$139k,Sharpe 0.18 → 3.69)。
+全池 WF 模拟(540个配置,每折按训练Sharpe重选):Sharpe 0.69,均 +$271/笔。
+
+**结论与教训:**
+
+- 第一阶段网格是**双向**配置(z>+T 做多同时 z<−T 做空)。第二阶段的单边分解修正了归因:`plus_di` 的多头腿(研究期 +$160k)在双向配置里被亏损的空头腿掩盖;`aroon` 第一阶段的利润主要来自**空头腿**;`gap_pct` 的利润全部在多头腿。
+- 两两组合**冗余**:`aroon ∧ plus_di` 在 T=1.25 时保留 plus_di 单独交易的 89–96%,Sharpe 还略低;T=1.5 时重叠骤降到 <6%(笔数太少)。
+- 探索性(未锁定):`aroon_up_25` 做空(z<−1.5, W6048)— 研究Sharpe 1.42,+$724/笔,170笔,4折全正。
+
+审判日 — 研究冻结后,对封存数据运行锁定规格**一次**:
 
 ```bash
-python scripts/run_backtest.py --strategy ema_cross_9_21 --save
-python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
+python scripts/run_combo_matrix.py --final
 ```
-
-**基线结果(2023-09 → 2026-09,固定100盎司,初始$100k):**
-
-| 策略 | 收益 | Sharpe | PF | 胜率 | 笔数 | 摩擦成本 |
-|---|---:|---:|---:|---:|---:|---:|
-| EMA 9/21 交叉 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
-| 唐奇安20突破 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
-
-> 关键教训:100盎司下每笔往返成本**$16** → 每天10笔 ≈ $160/天 ≈ 每年$58k(本金$100k)。日内策略的边际收益必须先跨过这道门槛——这正是下一步特征筛选要量化的东西。
 
 ### 快速开始
 
@@ -243,6 +269,12 @@ python analysis/quant_analysis.py
 
 # 运行基线回测(含无前视验证)
 python scripts/run_backtest.py --strategy ema_cross_9_21 --save
+
+# 第一阶段:IC筛选 + 单因子网格(IS/OOS 七三分割)
+python scripts/run_screening.py
+
+# 第二阶段:单边组合矩阵 + 4折walk-forward(封存最后6个月)
+python scripts/run_combo_matrix.py
 ```
 
 ### 核心结论(日线级别 2020–2026,完整报告见 [`report/`](report/quant_analysis_report.html))
@@ -272,11 +304,16 @@ python scripts/run_backtest.py --strategy ema_cross_9_21 --save
 ├── analysis/indicators_library.py    # 64指标库(纯pandas/numpy)
 ├── analysis/build_indicators.py  # 指标数据集构建与验证脚本
 ├── analysis/quant_analysis.py    # 统计分析 + HTML报告生成
+├── analysis/data_quality.py      # 假日死盘QC(report/data_quality_5m.md)
+├── analysis/factor_screening.py  # IC + 网格机制(快速记账,与引擎校准到$0.00)
+├── analysis/combo_screening.py   # 单边组合 + walk-forward引擎
 ├── backtest/                     # 事件驱动回测引擎
 │   ├── engine.py · config.py · metrics.py · validate.py
 ├── strategies/baseline.py        # 基线策略:ema_cross_9_21 / donchian_breakout_20
 ├── scripts/run_backtest.py       # 回测运行器(含验证)
-└── report/quant_analysis_report.html + backtest_*.md
+├── scripts/run_screening.py      # 第一阶段运行器(IC + 网格)
+├── scripts/run_combo_matrix.py   # 第二阶段运行器(walk-forward + 封存终审)
+└── report/quant_analysis_report.html + backtest_*.md + factor_screening.md + combo_matrix.md
 ```
 
 ### 免责声明
