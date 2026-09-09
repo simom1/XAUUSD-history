@@ -60,6 +60,31 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 > ≈ $58k/year of friction on $100k capital. Any intraday edge must clear this
 > bar first — which is exactly what the feature-screening step measures.
 
+### Backtest Framework (event-driven, cost-aware)
+
+| | |
+|---|---|
+| Engine | [`backtest/engine.py`](backtest/engine.py) — signal at bar close → fill at **next bar open**; SL/TP checked intrabar (stop-first on ties); daily flat 20:55 UTC (Fri 20:45) |
+| Costs | **$0.16 /oz round-trip all-in** (spread + slippage + commission, Gate.io actual) → $0.08 per side |
+| Validation | synthetic PnL hand-checks + no-lookahead **prefix-consistency check** (truncated-history replay must be bit-identical) |
+| Runner | [`scripts/run_backtest.py`](scripts/run_backtest.py) |
+
+```bash
+python scripts/run_backtest.py --strategy ema_cross_9_21 --save
+python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
+```
+
+**Baseline results (2023-09 → 2026-09, fixed 100 oz, $100k start):**
+
+| strategy | return | Sharpe | PF | win rate | trades | friction paid |
+|---|---:|---:|---:|---:|---:|---:|
+| EMA cross 9/21 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
+| Donchian breakout 20 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
+
+> Key lesson: at 100 oz each round trip costs **$16** → 10 trades/day ≈ $160/day
+> ≈ $58k/year of friction on $100k capital. Any intraday edge must clear this
+> bar first — which is exactly what the feature-screening step measures.
+
 ### Quick Start
 
 ```bash
@@ -155,6 +180,29 @@ Market data provided **as is**, for research and education only. Not investment 
 | 说明 | 22根假日死盘K线(o=h=l=c)的K线形态值为NaN(0/0未定义,属预期) |
 
 **指标清单** — 趋势: `sma_10/20/50/200`、`ema_9/12/21/26/50/200`、`wma_20` · MACD: `macd_dif/dea/hist` · 动量: `rsi_6/14/24`、`stoch_k_14`、`stoch_d_14`、`stochrsi_k/d`、`kdj_k/d/j`、`cci_14`、`williams_r_14`、`momentum_10`、`roc_12` · 波动: `tr`、`atr_7/14/28`、`natr_14`、`bb_up/mid/low/width/pct_b`、`kc_mid/up/low`、`donchian_up/low/mid_20` · 强度: `adx_14`、`plus_di_14`、`minus_di_14`、`aroon_up/down_25`、`psar` · 统计: `zscore_20`、`linreg_slope_20`、`hv_20`、`hv_96`、`hv_ratio`、`choppiness_14`、`candle_body_pct`、`upper/lower_shadow_pct`、`hl_range_pct`、`gap_pct`、`clv`、`close_vs_ema200_pct`、`close_vs_sma20_pct`。
+
+### 回测框架(事件驱动、计入真实成本)
+
+| | |
+|---|---|
+| 引擎 | [`backtest/engine.py`](backtest/engine.py) — 信号在bar收盘产生 → **下一根bar开盘价成交**;SL/TP盘中按高低点触发(双触发时止损优先);每日20:55 UTC强平(周五20:45) |
+| 成本 | **$0.16/oz 全包往返**(点差+滑点+佣金,Gate.io实际) → 每边$0.08 |
+| 验证 | 合成盈亏手工对账 + **无前视一致性检查**(截断历史重放,权益路径逐位一致) |
+| 运行 | [`scripts/run_backtest.py`](scripts/run_backtest.py) |
+
+```bash
+python scripts/run_backtest.py --strategy ema_cross_9_21 --save
+python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
+```
+
+**基线结果(2023-09 → 2026-09,固定100盎司,初始$100k):**
+
+| 策略 | 收益 | Sharpe | PF | 胜率 | 笔数 | 摩擦成本 |
+|---|---:|---:|---:|---:|---:|---:|
+| EMA 9/21 交叉 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
+| 唐奇安20突破 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
+
+> 关键教训:100盎司下每笔往返成本**$16** → 每天10笔 ≈ $160/天 ≈ 每年$58k(本金$100k)。日内策略的边际收益必须先跨过这道门槛——这正是下一步特征筛选要量化的东西。
 
 ### 回测框架(事件驱动、计入真实成本)
 
