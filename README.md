@@ -1,6 +1,6 @@
 # 🥇 XAUUSD Quant Lab
 
-> XAUUSD (Gold) CFD quantitative research — 3 years of 5-minute OHLC data (211k bars) from Gate.io TradFi API, with volatility / risk / seasonality analysis and a ready-to-use **64-indicator dataset** for intraday strategy development.
+> XAUUSD (Gold) CFD quantitative research — 3 years of 5-minute OHLC data (211k bars) from Gate.io TradFi API, volatility / risk / seasonality analysis, a **64-indicator dataset** (no-lookahead verified), and a **cost-aware event-driven backtest framework** for intraday strategy development.
 
 [中文说明](#中文说明) | [English](#english)
 
@@ -35,6 +35,31 @@
 
 **Indicator list** — Trend: `sma_10/20/50/200`, `ema_9/12/21/26/50/200`, `wma_20` · MACD: `macd_dif/dea/hist` · Momentum: `rsi_6/14/24`, `stoch_k_14`, `stoch_d_14`, `stochrsi_k/d`, `kdj_k/d/j`, `cci_14`, `williams_r_14`, `momentum_10`, `roc_12` · Volatility: `tr`, `atr_7/14/28`, `natr_14`, `bb_up/mid/low/width/pct_b`, `kc_mid/up/low`, `donchian_up/low/mid_20` · Strength: `adx_14`, `plus_di_14`, `minus_di_14`, `aroon_up/down_25`, `psar` · Statistical: `zscore_20`, `linreg_slope_20`, `hv_20`, `hv_96`, `hv_ratio`, `choppiness_14`, `candle_body_pct`, `upper/lower_shadow_pct`, `hl_range_pct`, `gap_pct`, `clv`, `close_vs_ema200_pct`, `close_vs_sma20_pct`.
 
+### Backtest Framework (event-driven, cost-aware)
+
+| | |
+|---|---|
+| Engine | [`backtest/engine.py`](backtest/engine.py) — signal at bar close → fill at **next bar open**; SL/TP checked intrabar (stop-first on ties); daily flat 20:55 UTC (Fri 20:45) |
+| Costs | **$0.16 /oz round-trip all-in** (spread + slippage + commission, Gate.io actual) → $0.08 per side |
+| Validation | synthetic PnL hand-checks + no-lookahead **prefix-consistency check** (truncated-history replay must be bit-identical) |
+| Runner | [`scripts/run_backtest.py`](scripts/run_backtest.py) |
+
+```bash
+python scripts/run_backtest.py --strategy ema_cross_9_21 --save
+python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
+```
+
+**Baseline results (2023-09 → 2026-09, fixed 100 oz, $100k start):**
+
+| strategy | return | Sharpe | PF | win rate | trades | friction paid |
+|---|---:|---:|---:|---:|---:|---:|
+| EMA cross 9/21 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
+| Donchian breakout 20 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
+
+> Key lesson: at 100 oz each round trip costs **$16** → 10 trades/day ≈ $160/day
+> ≈ $58k/year of friction on $100k capital. Any intraday edge must clear this
+> bar first — which is exactly what the feature-screening step measures.
+
 ### Quick Start
 
 ```bash
@@ -48,6 +73,9 @@ python analysis/build_indicators.py
 
 # regenerate the interactive HTML report from data/*.csv
 python analysis/quant_analysis.py
+
+# run a validated baseline backtest (cost-aware)
+python scripts/run_backtest.py --strategy ema_cross_9_21 --save
 ```
 
 ### Key Findings (daily-resolution study, 2020–2026, full report in [`report/`](report/quant_analysis_report.html))
@@ -77,7 +105,11 @@ python analysis/quant_analysis.py
 ├── analysis/indicators_library.py    # 64-indicator library (pure pandas/numpy)
 ├── analysis/build_indicators.py  # builds & validates the indicator dataset
 ├── analysis/quant_analysis.py    # stats + interactive HTML report generator
-└── report/quant_analysis_report.html
+├── backtest/                     # event-driven backtest engine
+│   ├── engine.py · config.py · metrics.py · validate.py
+├── strategies/baseline.py        # ema_cross_9_21, donchian_breakout_20
+├── scripts/run_backtest.py       # backtest runner (validated)
+└── report/quant_analysis_report.html + backtest_*.md
 ```
 
 ### Data Availability by Timeframe (Gate.io TradFi, probed 2026-09-09)
@@ -124,6 +156,29 @@ Market data provided **as is**, for research and education only. Not investment 
 
 **指标清单** — 趋势: `sma_10/20/50/200`、`ema_9/12/21/26/50/200`、`wma_20` · MACD: `macd_dif/dea/hist` · 动量: `rsi_6/14/24`、`stoch_k_14`、`stoch_d_14`、`stochrsi_k/d`、`kdj_k/d/j`、`cci_14`、`williams_r_14`、`momentum_10`、`roc_12` · 波动: `tr`、`atr_7/14/28`、`natr_14`、`bb_up/mid/low/width/pct_b`、`kc_mid/up/low`、`donchian_up/low/mid_20` · 强度: `adx_14`、`plus_di_14`、`minus_di_14`、`aroon_up/down_25`、`psar` · 统计: `zscore_20`、`linreg_slope_20`、`hv_20`、`hv_96`、`hv_ratio`、`choppiness_14`、`candle_body_pct`、`upper/lower_shadow_pct`、`hl_range_pct`、`gap_pct`、`clv`、`close_vs_ema200_pct`、`close_vs_sma20_pct`。
 
+### 回测框架(事件驱动、计入真实成本)
+
+| | |
+|---|---|
+| 引擎 | [`backtest/engine.py`](backtest/engine.py) — 信号在bar收盘产生 → **下一根bar开盘价成交**;SL/TP盘中按高低点触发(双触发时止损优先);每日20:55 UTC强平(周五20:45) |
+| 成本 | **$0.16/oz 全包往返**(点差+滑点+佣金,Gate.io实际) → 每边$0.08 |
+| 验证 | 合成盈亏手工对账 + **无前视一致性检查**(截断历史重放,权益路径逐位一致) |
+| 运行 | [`scripts/run_backtest.py`](scripts/run_backtest.py) |
+
+```bash
+python scripts/run_backtest.py --strategy ema_cross_9_21 --save
+python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
+```
+
+**基线结果(2023-09 → 2026-09,固定100盎司,初始$100k):**
+
+| 策略 | 收益 | Sharpe | PF | 胜率 | 笔数 | 摩擦成本 |
+|---|---:|---:|---:|---:|---:|---:|
+| EMA 9/21 交叉 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
+| 唐奇安20突破 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
+
+> 关键教训:100盎司下每笔往返成本**$16** → 每天10笔 ≈ $160/天 ≈ 每年$58k(本金$100k)。日内策略的边际收益必须先跨过这道门槛——这正是下一步特征筛选要量化的东西。
+
 ### 快速开始
 
 ```bash
@@ -137,6 +192,9 @@ python analysis/build_indicators.py
 
 # 从 data/*.csv 重新生成交互式HTML分析报告
 python analysis/quant_analysis.py
+
+# 运行基线回测(含无前视验证)
+python scripts/run_backtest.py --strategy ema_cross_9_21 --save
 ```
 
 ### 核心结论(日线级别 2020–2026,完整报告见 [`report/`](report/quant_analysis_report.html))
@@ -166,7 +224,11 @@ python analysis/quant_analysis.py
 ├── analysis/indicators_library.py    # 64指标库(纯pandas/numpy)
 ├── analysis/build_indicators.py  # 指标数据集构建与验证脚本
 ├── analysis/quant_analysis.py    # 统计分析 + HTML报告生成
-└── report/quant_analysis_report.html
+├── backtest/                     # 事件驱动回测引擎
+│   ├── engine.py · config.py · metrics.py · validate.py
+├── strategies/baseline.py        # 基线策略:ema_cross_9_21 / donchian_breakout_20
+├── scripts/run_backtest.py       # 回测运行器(含验证)
+└── report/quant_analysis_report.html + backtest_*.md
 ```
 
 ### 免责声明
