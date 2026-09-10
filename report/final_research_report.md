@@ -48,6 +48,16 @@ presentation.
   floor/cap grid; nothing is selected from it. This is a sizing layer for
   the final-judgment spec, not a new signal candidate.
 
+## Cross-timeframe check (2026-09-10)
+
+- The same study was run at 15 minutes (`final_research_report_15m.md`):
+  independent nested walk-forward mining found no candidate (4 folds, 4
+  different picks), and the locked 5-minute specification transferred to
+  15-minute bars in-sample (research Sharpe +1.56) but failed the
+  diagnostic segment (Sharpe -1.70) exactly as at 5 minutes. The failure
+  is regime dependent, not timeframe dependent. This strengthens, and does
+  not change, the conclusion above.
+
 ## Next independent validation
 
 Accumulate at least six continuous months of new data after 2026-09-09.  Then

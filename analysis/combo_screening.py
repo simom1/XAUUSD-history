@@ -202,7 +202,7 @@ def evaluate(long_dec: np.ndarray, short_dec: np.ndarray, H: int, ses: Session,
              o: np.ndarray, c: np.ndarray, n: int,
              folds: list[dict], atr: np.ndarray | None = None,
              stop_atr: float | None = None, trail_atr: float | None = None,
-             target_atr: float | None = None) -> dict | None:
+             target_atr: float | None = None, ann: float = ANN) -> dict | None:
     """Build the position path once; metrics for the research period + per-fold
     train/test windows (train = prefix [0, test_lo), test = [test_lo, test_hi)).
 
@@ -218,11 +218,11 @@ def evaluate(long_dec: np.ndarray, short_dec: np.ndarray, H: int, ses: Session,
         return None
     B = pnl_from_path(pos, o, c, ses.flat, corr)
     out: dict = {"_B": B, "_trades": trades,
-                 "res": config_metrics(B, trades, 0, n)}
+                 "res": config_metrics(B, trades, 0, n, ann=ann)}
     for f in folds:
         out[f["name"]] = {
-            "train": config_metrics(B, trades, 0, f["test_lo"]),
-            "test": config_metrics(B, trades, f["test_lo"], f["test_hi"]),
+            "train": config_metrics(B, trades, 0, f["test_lo"], ann=ann),
+            "test": config_metrics(B, trades, f["test_lo"], f["test_hi"], ann=ann),
         }
     return out
 
@@ -320,7 +320,8 @@ def walk_forward(grid: pd.DataFrame, folds: list[dict], gate: int, zget,
                  atr: np.ndarray | None = None,
                  stop_atr: float | None = None,
                  trail_atr: float | None = None,
-                 target_atr: float | None = None
+                 target_atr: float | None = None,
+                 ann: float = ANN
                  ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Walk-forward selection simulation.
 
@@ -352,7 +353,7 @@ def walk_forward(grid: pd.DataFrame, folds: list[dict], gate: int, zget,
         cfg = parse_spec(p["spec"])
         ld, sd_ = masks_from_spec(cfg, zget, side_map, long_gate, short_gate)
         ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, [], atr,
-                      stop_atr, trail_atr, target_atr)
+                      stop_atr, trail_atr, target_atr, ann=ann)
         B = ev["_B"]
         f = next(x for x in folds if x["name"] == p["fold"])
         seg = B[f["test_lo"]:f["test_hi"]]
@@ -364,5 +365,5 @@ def walk_forward(grid: pd.DataFrame, folds: list[dict], gate: int, zget,
     agg = {"folds": len(picks), "folds_positive": pos_folds,
            "wf_pnl": round(tot_pnl, 0), "wf_trades": tot_tr,
            "wf_avg": round(tot_pnl / tot_tr, 2) if tot_tr else float("nan"),
-           "wf_sharpe": round(float(cat.mean() / cat.std() * ANN), 2) if cat.std() > 0 else 0.0}
+           "wf_sharpe": round(float(cat.mean() / cat.std() * ann), 2) if cat.std() > 0 else 0.0}
     return picks_df, pd.DataFrame([agg])

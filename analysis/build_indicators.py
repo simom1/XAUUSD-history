@@ -12,8 +12,9 @@ Also runs validation checks:
   3. Spot-check RSI/EMA/ATR against an independent recomputation.
 
 Usage:
-    python analysis/build_indicators.py
+    python analysis/build_indicators.py [--src data/xauusd_5m.csv]
 """
+import argparse
 import gzip
 import sys
 import time
@@ -40,6 +41,16 @@ PRICE_LIKE = {
 
 
 def main() -> None:
+    global SRC, DST
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--src", type=Path, default=SRC,
+                    help="input OHLC csv (default: 5m dataset)")
+    ap.add_argument("--dst", type=Path, default=None,
+                    help="output csv.gz (default: alongside --src, _indicators.csv.gz)")
+    args = ap.parse_args()
+    SRC = args.src
+    DST = args.dst or SRC.with_name(SRC.stem + "_indicators.csv.gz")
+
     t0 = time.time()
     print(f"[1/5] loading {SRC.name} ...")
     df = pd.read_csv(SRC)

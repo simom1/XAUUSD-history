@@ -35,8 +35,11 @@ def _reg(group: str, names: list[str]) -> None:
     FACTOR_GROUPS[group] = names
 
 
-def build_factors(df: pd.DataFrame) -> pd.DataFrame:
-    """Derive scale-free factors. All transforms use current/past data only."""
+def build_factors(df: pd.DataFrame, fast_window: int = 96) -> pd.DataFrame:
+    """Derive scale-free factors. All transforms use current/past data only.
+
+    fast_window is the composite-factor lookback in bars (96 = 8h of 5m bars;
+    pass 32 for the same 8h horizon on 15m bars)."""
     c = df["close"]
     F = pd.DataFrame(index=df.index)
 
@@ -99,9 +102,9 @@ def build_factors(df: pd.DataFrame) -> pd.DataFrame:
     mdi = df["minus_di_14"].replace(0.0, np.nan)
     F["di_ratio"] = (df["plus_di_14"] / mdi).clip(-10, 10)
     bw = df["bb_width"]
-    F["bb_squeeze"] = ((bw - bw.rolling(96, min_periods=48).mean()) /
-                       bw.rolling(96, min_periods=48).std().replace(0.0, np.nan))
-    F["vol_percentile"] = df["natr_14"].rolling(96, min_periods=48).rank(pct=True) * 100.0
+    F["bb_squeeze"] = ((bw - bw.rolling(fast_window, min_periods=fast_window // 2).mean()) /
+                       bw.rolling(fast_window, min_periods=fast_window // 2).std().replace(0.0, np.nan))
+    F["vol_percentile"] = df["natr_14"].rolling(fast_window, min_periods=fast_window // 2).rank(pct=True) * 100.0
     _reg("composite (5)", comp)
 
     return F
@@ -128,8 +131,8 @@ def rolling_z(s: pd.Series, W: int) -> np.ndarray:
 # Session masks (identical rules to BacktestEngine)
 # ----------------------------------------------------------------------
 class Session:
-    def __init__(self, ts_sec: np.ndarray):
-        eng = BacktestEngine(BacktestConfig())
+    def __init__(self, ts_sec: np.ndarray, bar_seconds: int = 300):
+        eng = BacktestEngine(BacktestConfig(bar_seconds=bar_seconds))
         self.flat, self.blocked = eng._session_masks(ts_sec, True)
         self.flat_idx = np.flatnonzero(self.flat)
         self.blocked_idx = np.flatnonzero(self.blocked)

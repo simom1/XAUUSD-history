@@ -38,3 +38,32 @@ PLANNED_FEATURES = (
     ExternalFeatureSpec("cot", "weekly", "release timestamp", "available_at", "backward_asof"),
     ExternalFeatureSpec("macro_event", "event", "scheduled release timestamp", "available_at", "event_window"),
 )
+
+
+class PlannedExternalFeatureProvider:
+    """Metadata-only adapter base; deliberately has no download implementation."""
+
+    def __init__(self, spec: ExternalFeatureSpec):
+        self.spec = spec
+
+    def load(self) -> pd.DataFrame:
+        raise NotImplementedError(f"{self.spec.name} data is not connected in this revision")
+
+    def align_to_bars(self, bars: pd.DataFrame) -> pd.Series:
+        raise NotImplementedError(f"{self.spec.name} data is not connected in this revision")
+
+
+class DxyProvider(PlannedExternalFeatureProvider):
+    def __init__(self): super().__init__(PLANNED_FEATURES[0])
+
+
+class RealYieldProvider(PlannedExternalFeatureProvider):
+    def __init__(self): super().__init__(PLANNED_FEATURES[1])
+
+
+class CotProvider(PlannedExternalFeatureProvider):
+    def __init__(self): super().__init__(PLANNED_FEATURES[2])
+
+
+class MacroEventProvider(PlannedExternalFeatureProvider):
+    def __init__(self): super().__init__(PLANNED_FEATURES[3])

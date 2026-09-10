@@ -60,6 +60,12 @@ def md_table(df: pd.DataFrame, floatfmt: str = "{:.2f}") -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--data", type=Path, default=DATA,
+                    help="indicator csv.gz (default: 5m dataset)")
+    ap.add_argument("--bar-seconds", type=int, default=300,
+                    help="bar duration in seconds (300=5m, 900=15m)")
+    ap.add_argument("--tag", default="",
+                    help="suffix for output files/reports (e.g. _15m)")
     ap.add_argument("--is-frac", type=float, default=0.7)
     ap.add_argument("--windows", type=int, nargs="+", default=[2016, 6048])
     ap.add_argument("--thrs", type=float, nargs="+", default=[1.5, 2.5])
@@ -71,10 +77,11 @@ def main() -> None:
     ap.add_argument("--research-end", default="2026-03-10",
                     help="exclusive UTC date; later data is development-only")
     args = ap.parse_args()
+    ann = float(np.sqrt(86400 / args.bar_seconds * 252))
 
     t0 = time.perf_counter()
-    print(f"loading {DATA.name} ...")
-    df_all = pd.read_csv(DATA)
+    print(f"loading {args.data.name} ...")
+    df_all = pd.read_csv(args.data)
     cutoff = pd.Timestamp(args.research_end, tz="UTC").timestamp()
     df = df_all[df_all["timestamp"] < cutoff].reset_index(drop=True)
     n = len(df)
@@ -86,13 +93,14 @@ def main() -> None:
     print(f"research cutoff={args.research_end} (exclusive; later data is development-only)")
     print(f"bars={n:,}  IS=[0:{is_end:,}] {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[is_end]:%Y-%m-%d}"
           f"   OOS=[{is_end:,}:{n:,}] {ts.iloc[is_end]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d}")
-    ses = Session(ts_sec)
+    ses = Session(ts_sec, bar_seconds=args.bar_seconds)
 
     # ---------------- stage 0: fast-model calibration ----------------
     print("\n[0] calibrating fast accounting vs engine (EMA 9/21) ...")
     strat = EmaCrossStrategy(9, 21)
     tgt = strat.targets(df)
-    res = BacktestEngine(BacktestConfig()).run(df, tgt, warmup_bars=strat.warmup_bars)
+    res = BacktestEngine(BacktestConfig(bar_seconds=args.bar_seconds)).run(
+        df, tgt, warmup_bars=strat.warmup_bars)
     eng_net = res.equity[-1] - res.config.initial_capital
     tgt[:strat.warmup_bars] = 0.0
     pos = path_from_targets(tgt, ses.blocked, ses.flat)
@@ -109,8 +117,8 @@ def main() -> None:
     names = factor_list()
     assert all(col in F.columns for col in names), "factor universe mismatch"
     ic_df = ic_stats(F, c, ts, is_end, horizons=(12, 84, 288))
-    ic_df.to_csv(REPORTS / "factor_ic_results.csv", index=False)
-    print(f"    {len(ic_df)} IC rows -> factor_ic_results.csv")
+    ic_df.to_csv(REPORTS / f"factor_ic_results{args.tag}.csv", index=False)
+    print(f"    {len(ic_df)} IC rows -> factor_ic_results{args.tag}.csv")
 
     # ---------------- stage 2: grid backtest ----------------
     print("\n[2] single-factor grid backtest ...")
@@ -130,9 +138,9 @@ def main() -> None:
                             continue
                         B = pnl_from_path(p, o, c, ses.flat, corr)
                         lo_is = max(0, trades[0][0] - 1)
-                        m_is = config_metrics(B, trades, lo_is, is_end)
-                        m_os = config_metrics(B, trades, is_end, n)
-                        m_fl = config_metrics(B, trades, lo_is, n)
+                        m_is = config_metrics(B, trades, lo_is, is_end, ann=ann)
+                        m_os = config_metrics(B, trades, is_end, n, ann=ann)
+                        m_fl = config_metrics(B, trades, lo_is, n, ann=ann)
                         rows.append({
                             "factor": fname, "win": W, "thr": T,
                             "long_when": "high" if sgn > 0 else "low", "hold": H,
@@ -147,8 +155,8 @@ def main() -> None:
                         })
         print(f"    [{fi_:2d}/{len(names)}] {fname}")
     grid = pd.DataFrame(rows)
-    grid.to_csv(REPORTS / "factor_grid_results.csv", index=False)
-    print(f"    {len(grid)} configurations -> factor_grid_results.csv")
+    grid.to_csv(REPORTS / f"factor_grid_results{args.tag}.csv", index=False)
+    print(f"    {len(grid)} configurations -> factor_grid_results{args.tag}.csv")
 
     ok = grid[grid["is_trades"] >= args.min_trades].copy()
     ok = ok.sort_values("is_sharpe", ascending=False).reset_index(drop=True)
@@ -178,8 +186,8 @@ def main() -> None:
             tgtz = np.zeros(n)
             for (f, e, sgn_, last) in trades:
                 tgtz[f - 1:last] = sgn_ * OZ
-            cres = BacktestEngine(BacktestConfig()).run(df, tgtz, warmup_bars=0,
-                                                        meta={"config": r.to_dict()})
+            cres = BacktestEngine(BacktestConfig(bar_seconds=args.bar_seconds)).run(
+                df, tgtz, warmup_bars=0, meta={"config": r.to_dict()})
             eng_pnl = cres.equity[-1] - cres.config.initial_capital
             eng_tr = len(cres.trades)
             eng_cost = float(cres.trades["costs"].sum()) if eng_tr else 0.0
@@ -234,10 +242,12 @@ def main() -> None:
     show.insert(0, "rank", range(1, len(show) + 1))
 
     n_cfg = len(grid)
+    tf_label = {300: "5m", 900: "15m", 1800: "30m", 3600: "1h"}.get(args.bar_seconds,
+               f"{args.bar_seconds}s")
     L = []
-    L.append("# XAUUSD 5m - Factor Screening Report\n")
+    L.append(f"# XAUUSD {tf_label} - Factor Screening Report\n")
     L.append(f"> Research-only revision: {args.research_end} onward is excluded from selection and remains a consumed development set.\n")
-    L.append(f"- data: `{DATA.name}` ({n:,} bars, {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d})")
+    L.append(f"- data: `{args.data.name}` ({n:,} bars, {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d})")
     L.append(f"- IS/OOS split: first {args.is_frac:.0%} IS "
              f"({ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[is_end]:%Y-%m-%d}), "
              f"last {1 - args.is_frac:.0%} OOS ({ts.iloc[is_end]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d})")
@@ -248,7 +258,10 @@ def main() -> None:
     L.append(f"1. **Factor universe**: {len(names)} scale-free factors derived from the "
              "64-indicator set (price-level indicators converted to % distance / channel position).")
     L.append(f"2. **IC study**: monthly Spearman rank IC vs forward returns "
-             f"h in {tuple(int(x) for x in (12, 84, 288))} bars (1h / ~7h / ~24h); "
+             f"h in {tuple(int(x) for x in (12, 84, 288))} bars "
+             f"({args.bar_seconds / 60:.0f}m bars -> "
+             f"{12 * args.bar_seconds / 3600:.0f}h / {84 * args.bar_seconds / 3600:.0f}h / "
+             f"{288 * args.bar_seconds / 3600:.0f}h); "
              "selection uses IS months only, OOS Spearman reported as stability check.")
     L.append(f"3. **Grid backtest**: entry when trailing z-score (windows {args.windows}) "
              f"crosses +/-{args.thrs}, fixed hold {args.holds} bars, long-when-high (momentum) "
@@ -263,7 +276,7 @@ def main() -> None:
     t84 = ic84.sort_values("abst", ascending=False).head(15)[
         ["factor", "ic_mean", "icir", "t", "pos_pct", "is_spr", "oos_spr", "months"]]
     L.append(md_table(t84, floatfmt="{:+.4f}") +
-             "\n\n(full table: `report/factor_ic_results.csv`, horizons 12/84/288)\n")
+             f"\n\n(full table: `report/factor_ic_results{args.tag}.csv`, horizons 12/84/288)\n")
     L.append("## Single-factor grid - top "
              f"{min(args.top, len(show))} by IS Sharpe (min {args.min_trades} IS trades)\n")
     L.append(md_table(show, floatfmt="{:+.2f}") + "\n")
@@ -288,7 +301,7 @@ def main() -> None:
     L.append("- No volume data exists on Gate.io TradFi klines; volume factors out of scope.")
     L.append(f"- Margin/leverage not modeled (fixed {OZ:.0f} oz).")
 
-    out = REPORTS / "factor_screening.md"
+    out = REPORTS / f"factor_screening{args.tag}.md"
     out.write_text("\n".join(L) + "\n", encoding="utf-8")
     print(f"\nsaved: {out.relative_to(ROOT)}")
     print(f"total runtime: {time.perf_counter() - t0:.0f}s")

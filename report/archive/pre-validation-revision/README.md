@@ -6,5 +6,5 @@ or a holdout protocol that had already exposed its last six months during
 earlier selection.  They are retained for audit history only and must not be
 compared with current reports or used as deployment evidence.
 
-The current reports use one account, 100 oz maximum exposure, conservative
+The current reports use one account, 1 oz (0.01 lot) maximum exposure, conservative
 bar-extreme protective fills, and 5-minute USD PnL Sharpe.

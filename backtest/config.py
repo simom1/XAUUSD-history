@@ -16,6 +16,7 @@ class BacktestConfig:
     commission_bps: float = 0.0        # EXTRA bps of notional per side (default none — 0.16 is all-in)
 
     # --- session rules (UTC; bar timestamps are bar-START times) ---
+    bar_seconds: int = 300           # bar duration (300 = 5m bars, 900 = 15m bars)
     intraday_only: bool = True       # force flat at the daily cutoff
     eod_flat_utc: str = "20:55"      # bar closing at/after this time is the last bar
     friday_flat_utc: str = "20:45"   # Friday: close earlier, avoid the weekend gap

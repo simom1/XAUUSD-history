@@ -101,7 +101,7 @@ def main() -> None:
         "next-open fills, $0.16/oz round-trip cost.",
         "- exits: entry ATR(14) fixed stop 2.5×; all protective exits fill at the adverse bar extreme.",
         "- metric: annualized 5-minute USD PnL Sharpe (sqrt(288×252)); margin, financing and liquidation are not modeled.", "",
-        "## Locked development specification", "",
+        "## Attribution specification (not a candidate)", "",
         f"- long: `{LONG_SPEC}`, gates `{LONG_GATE}`",
         f"- short: `{SHORT_SPEC}`, gates `{SHORT_GATE}`",
         "- opposing signals reverse at the next open; simultaneous signals flatten the account.",
@@ -112,8 +112,8 @@ def main() -> None:
         f"| full history | ${full['final_equity'] - cfg.initial_capital:+,.0f} | {full['sharpe']:.2f} | {full['max_drawdown_pct']:.2f}% |", "",
         "## Internal research folds", "", "| fold | PnL | 5m Sharpe | max drawdown |", "|---|---:|---:|---:|",
         *fold_rows, "", "## Status", "",
-        "This is a development candidate only. Do not tune from the consumed development set. "
-        "After at least six new continuous months of data are available, freeze that new segment and run the pre-locked single-account specification once through the event engine.",
+        "The nested walk-forward research did not lock a candidate, so this legacy specification is presented only for attribution. "
+        "Do not tune it from the consumed development set. After at least six new continuous months are available, repeat candidate selection on the research protocol before freezing any final judgment set.",
     ]
     REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"saved {REPORT.relative_to(ROOT)}")

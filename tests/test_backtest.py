@@ -6,21 +6,21 @@ import numpy as np
 
 from backtest import BacktestConfig, BacktestEngine
 from backtest.validate import _mk_df, prefix_consistency_check, synthetic_pnl_check
-from scripts.run_integration import unified_targets
+from analysis.system_research import unified_targets
 
 
 class _Causal:
     warmup_bars = 0
 
     def targets(self, df):
-        return np.where(df["close"] > df["open"], 100.0, 0.0)
+        return np.where(df["close"] > df["open"], 1.0, 0.0)
 
 
 class _FutureReading:
     warmup_bars = 0
 
     def targets(self, df):
-        return np.where(df["close"].shift(-1) > df["close"], 100.0, 0.0)
+        return np.where(df["close"].shift(-1) > df["close"], 1.0, 0.0)
 
 
 class BacktestEngineTest(unittest.TestCase):
@@ -86,6 +86,15 @@ class BacktestEngineTest(unittest.TestCase):
         np.testing.assert_array_equal(target, np.array([1.0, 1.0, -1.0, 0.0]))
         self.assertEqual(conflicts, 1)
 
+    def test_single_leg_shapes_never_reverse_into_missing_leg(self):
+        long_only, long_conflicts = unified_targets(np.array([True, False, True]),
+                                                    np.zeros(3, dtype=bool), 2, 1)
+        short_only, short_conflicts = unified_targets(np.zeros(3, dtype=bool),
+                                                       np.array([True, False, True]), 1, 2)
+        np.testing.assert_array_equal(long_only, np.array([1.0, 0.0, 1.0]))
+        np.testing.assert_array_equal(short_only, np.array([-1.0, 0.0, -1.0]))
+        self.assertEqual(long_conflicts + short_conflicts, 0)
+
     def test_micro_lot_accounting_defaults(self):
         df = _mk_df([(100, 100, 100, 100), (100, 100, 100, 100),
                      (101, 101, 101, 101), (101, 101, 101, 101)])
@@ -97,6 +106,15 @@ class BacktestEngineTest(unittest.TestCase):
         self.assertAlmostEqual(trade["net_pnl"], 0.84)
         self.assertEqual(result.config.initial_capital, 10_000.0)
         self.assertEqual(result.config.max_position_oz, 1.0)
+
+    def test_lot_size_scales_pnl_and_cost(self):
+        df = _mk_df([(100, 100, 100, 100), (100, 100, 100, 100),
+                     (101, 101, 101, 101), (101, 101, 101, 101)])
+        for oz, gross, cost in ((1.0, 1.0, 0.16), (5.0, 5.0, 0.80), (10.0, 10.0, 1.60)):
+            result = BacktestEngine(BacktestConfig(intraday_only=False, max_position_oz=oz)).run(
+                df, np.array([oz, oz, 0, 0], float))
+            self.assertAlmostEqual(result.trades.iloc[0].gross_pnl, gross)
+            self.assertAlmostEqual(result.trades.iloc[0].costs, cost)
 
     def test_prefix_check_recomputes_targets(self):
         df = _mk_df([(100, 101, 99, 100 + i) for i in range(10)])

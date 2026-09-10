@@ -50,16 +50,16 @@ DATA = ROOT / "data" / "xauusd_5m_indicators.csv.gz"
 REPORTS = ROOT / "report"
 
 
-def build_cfg_list(args) -> list[dict]:
+def build_cfg_list(args, survivors: dict[str, str]) -> list[dict]:
     cfgs: list[dict] = []
-    for fname in SURVIVORS:
+    for fname, _side in survivors.items():
         for W in args.windows:
             for T in args.thrs:
                 for side in ("long", "short"):
                     for H in args.holds:
                         cfgs.append({"kind": "single", "factor": fname, "side": side,
                                      "win": W, "thr": T, "hold": H})
-    for fa, fb in combinations(SURVIVORS, 2):
+    for fa, fb in combinations(survivors, 2):
         for W in args.windows:
             for T in args.thrs:
                 for H in args.holds:
@@ -68,16 +68,30 @@ def build_cfg_list(args) -> list[dict]:
     return cfgs
 
 
+def parse_survivors(spec: str | None) -> dict[str, str]:
+    """--survivors "hv_96:low,atr_28_pct:low" -> factor -> long-when side."""
+    if not spec:
+        return SURVIVORS
+    out: dict[str, str] = {}
+    for part in spec.split(","):
+        fname, side = part.strip().split(":")
+        out[fname.strip()] = side.strip()
+    if not out:
+        raise SystemExit("--survivors parsed to an empty set")
+    return out
+
+
 def run_grid(cfgs, zget, ses, o, c, n, folds, progress: bool = True,
              long_gate=None, short_gate=None,
-             atr=None, stop_atr=None, trail_atr=None, target_atr=None):
+             atr=None, stop_atr=None, trail_atr=None, target_atr=None,
+             ann: float = ANN):
     rows = []
     total = len(cfgs)
     for i, cfg in enumerate(cfgs, 1):
         ld, sd_ = masks_from_spec(cfg, zget, long_gate=long_gate,
                                   short_gate=short_gate)
         ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, folds, atr,
-                      stop_atr, trail_atr, target_atr)
+                      stop_atr, trail_atr, target_atr, ann=ann)
         if ev is None:
             continue
         base = dict(cfg)
@@ -105,7 +119,7 @@ def candidate_table(grid: pd.DataFrame, folds, min_trades: int) -> pd.DataFrame:
 
 def run_final(spec: str, holdout_days: int, gate_names: str | None = None,
               dev: bool = False) -> None:
-    """Judgment day: evaluate one locked spec on the sealed holdout.
+    """Historical runner; its later segment is consumed development data, not a holdout.
 
     With --dev the holdout is treated as a DEVELOPMENT set (insight only,
     not judgment) - used after the holdout is consumed to test new ideas
@@ -169,6 +183,15 @@ def run_final(spec: str, holdout_days: int, gate_names: str | None = None,
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--data", type=Path, default=DATA,
+                    help="indicator csv.gz (default: 5m dataset)")
+    ap.add_argument("--bar-seconds", type=int, default=300,
+                    help="bar duration in seconds (300=5m, 900=15m)")
+    ap.add_argument("--tag", default="",
+                    help="suffix for output files/reports (e.g. _15m)")
+    ap.add_argument("--survivors", type=str, default=None,
+                    help="comma list factor:side overriding the built-in survivors "
+                         "(e.g. hv_96:low,atr_28_pct:low)")
     ap.add_argument("--windows", type=int, nargs="+", default=[4032, 6048, 8640])
     ap.add_argument("--thrs", type=float, nargs="+", default=[1.25, 1.5, 1.75, 2.0])
     ap.add_argument("--holds", type=int, nargs="+", default=[24, 36, 84, 120])
@@ -201,9 +224,12 @@ def main() -> None:
         run_final(args.final, args.holdout_days, args.gate, args.dev)
         return
 
+    survivors = parse_survivors(args.survivors)
+    ann = float(np.sqrt(86400 / args.bar_seconds * 252))
+
     t0 = time.perf_counter()
-    print(f"loading {DATA.name} ...")
-    df = pd.read_csv(DATA)
+    print(f"loading {args.data.name} ...")
+    df = pd.read_csv(args.data)
     ts_sec = df["timestamp"].to_numpy(dtype=np.int64)
     ts = pd.to_datetime(df["timestamp"], unit="s")
     h_idx, h_start = holdout_split(ts_sec, args.holdout_days)
@@ -224,13 +250,14 @@ def main() -> None:
     for f in folds:
         print(f"  fold {f['name']}: test {f['test_start']} -> {f['test_end']} "
               f"({f['test_hi'] - f['test_lo']:,} bars), train prefix {f['train_hi']:,} bars")
-    ses = Session(ts_sec)
+    ses = Session(ts_sec, bar_seconds=args.bar_seconds)
 
     # ---------------- stage 1: calibration on research slice ----------------
     print("\n[1] calibrating fast accounting vs engine on the research slice (EMA 9/21) ...")
     strat = EmaCrossStrategy(9, 21)
     tgt = strat.targets(df)
-    res = BacktestEngine(BacktestConfig()).run(df, tgt, warmup_bars=strat.warmup_bars)
+    res = BacktestEngine(BacktestConfig(bar_seconds=args.bar_seconds)).run(
+        df, tgt, warmup_bars=strat.warmup_bars)
     eng_net = res.equity[-1] - res.config.initial_capital
     tgt[:strat.warmup_bars] = 0.0
     pos = path_from_targets(tgt, ses.blocked, ses.flat)
@@ -267,7 +294,7 @@ def main() -> None:
                 short_gate &= gates[gn.strip()]
             print(f"    short gate: {args.short_gate} -> {short_gate.sum():,} of {n:,} bars")
 
-    cfgs = build_cfg_list(args)
+    cfgs = build_cfg_list(args, survivors)
     n_single = sum(1 for x in cfgs if x["kind"] == "single")
     n_combo = len(cfgs) - n_single
     print(f"\n[3] grid: {n_single} single-factor neighborhood + {n_combo} pairwise AND combos")
@@ -285,8 +312,8 @@ def main() -> None:
     grid = run_grid(cfgs, zget, ses, o, c, n, folds,
                     long_gate=long_gate, short_gate=short_gate,
                     atr=atr_arr, stop_atr=args.stop_atr,
-                    trail_atr=args.trail_atr, target_atr=args.target_atr)
-    suffix = "_gated" if (args.gate or args.short_gate) else ""
+                    trail_atr=args.trail_atr, target_atr=args.target_atr, ann=ann)
+    suffix = args.tag + ("_gated" if (args.gate or args.short_gate) else "")
     if atr_arr is not None:
         suffix += "_stopped"
     grid.to_csv(REPORTS / f"combo_wf_results{suffix}.csv", index=False)
@@ -307,7 +334,8 @@ def main() -> None:
         picks, agg = walk_forward(sub, folds, gate, zget, ses, o, c, n,
                                   long_gate=long_gate, short_gate=short_gate,
                                   atr=atr_arr, stop_atr=args.stop_atr,
-                                  trail_atr=args.trail_atr, target_atr=args.target_atr)
+                                  trail_atr=args.trail_atr, target_atr=args.target_atr,
+                                  ann=ann)
         wf_tables[pname], wf_aggs[pname] = picks, agg
         if not agg.empty:
             print(f"    {pname:8s}: {agg.to_dict('records')[0]}")
@@ -326,12 +354,13 @@ def main() -> None:
             ld, sd_ = masks_from_spec(cfg, zget, long_gate=long_gate,
                                       short_gate=short_gate)
             ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, [], atr_arr,
-                          args.stop_atr, args.trail_atr, args.target_atr)
+                          args.stop_atr, args.trail_atr, args.target_atr, ann=ann)
             B = ev["_B"]
             tgtz = np.zeros(n)
             for (f_, e_, s_, last) in ev["_trades"]:
                 tgtz[f_ - 1:last] = s_ * OZ
-            cres = BacktestEngine(BacktestConfig()).run(df, tgtz, warmup_bars=0)
+            cres = BacktestEngine(BacktestConfig(bar_seconds=args.bar_seconds)).run(
+                df, tgtz, warmup_bars=0)
             eng_pnl = cres.equity[-1] - cres.config.initial_capital
             delta = abs(eng_pnl - float(B.sum()))
             conf_rows.append({"spec": r["spec"], "engine_pnl": round(eng_pnl, 0),
@@ -347,8 +376,10 @@ def main() -> None:
                  [f"{f['name']}_test_trades" for f in folds_] + ["pos_folds", "wf_mean_sharpe"])
 
     L = []
-    L.append("# XAUUSD 5m - Combination Matrix + Walk-Forward Report\n")
-    L.append(f"- data: `{DATA.name}` ({n_full:,} bars, {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d})")
+    tf_label = {300: "5m", 900: "15m", 1800: "30m", 3600: "1h"}.get(args.bar_seconds,
+               f"{args.bar_seconds}s")
+    L.append(f"# XAUUSD {tf_label} - Combination Matrix + Walk-Forward Report\n")
+    L.append(f"- data: `{args.data.name}` ({n_full:,} bars, {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d})")
     L.append(f"- **Consumed development set excluded: {h_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} "
              f"({n_full - h_idx:,} bars); it is not independent validation.**")
     L.append(f"- research period: {ts_r.iloc[0]:%Y-%m-%d} -> {ts_r.iloc[-1]:%Y-%m-%d} "
@@ -361,9 +392,9 @@ def main() -> None:
                                     for f in folds])[["name", "test_start", "test_end",
                                                       "test_hi", "train_hi"]]))
     L.append("\n## Method\n")
-    L.append(f"1. **Survivor neighborhood**: the 4 surviving factors x {{long, short}} x "
-             f"W x T x H ({n_single} configs). Long = survivor direction "
-             "(aroon_up_25/close_vs_ema200/plus_di_14 long@high, gap_pct long@low).")
+    L.append(f"1. **Survivor neighborhood**: {len(survivors)} factors x {{long, short}} x "
+             f"W x T x H ({n_single} configs). Survivor directions: "
+             + ", ".join(f"{k}@{v}" for k, v in survivors.items()) + ".")
     L.append(f"2. **Combination matrix**: all {n_combo} pairwise AND-confirmed longs - "
              "both factors must be in their trigger state on the same decision bar.")
     L.append(f"3. **Walk-forward simulation**: per fold, the best train-Sharpe config "

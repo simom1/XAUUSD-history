@@ -9,8 +9,10 @@ TRADING_DAYS = 252
 BARS_PER_DAY = 288
 
 
-def compute_metrics(result) -> dict:
-    """Compute headline stats from a BacktestResult."""
+def compute_metrics(result, bars_per_day: int = BARS_PER_DAY) -> dict:
+    """Compute headline stats from a BacktestResult.
+
+    bars_per_day must match the bar length of the fed data (288 = 5m, 96 = 15m)."""
     eq = pd.Series(result.equity, index=pd.to_datetime(result.timestamps, unit="s"))
     trades = result.trades
     cfg = result.config
@@ -22,10 +24,11 @@ def compute_metrics(result) -> dict:
     # Research-wide headline metric: 5-minute dollar PnL Sharpe.  This is
     # intentionally the same convention used by the screening pipeline.
     bar_pnl = eq.diff().dropna()
-    sharpe = (float(bar_pnl.mean() / bar_pnl.std() * np.sqrt(BARS_PER_DAY * TRADING_DAYS))
+    ann_root = float(np.sqrt(bars_per_day * TRADING_DAYS))
+    sharpe = (float(bar_pnl.mean() / bar_pnl.std() * ann_root)
               if len(bar_pnl) > 2 and bar_pnl.std() > 0 else 0.0)
     downside_pnl = bar_pnl[bar_pnl < 0]
-    sortino = (float(bar_pnl.mean() / downside_pnl.std() * np.sqrt(BARS_PER_DAY * TRADING_DAYS))
+    sortino = (float(bar_pnl.mean() / downside_pnl.std() * ann_root)
                if len(downside_pnl) > 2 and downside_pnl.std() > 0 else 0.0)
 
     daily = eq.resample("1D").last().dropna()

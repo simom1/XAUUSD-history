@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Phase 3: ATR stop-loss / trailing / target study on the best candidates.
+"""Historical independent-leg ATR exit study; not a current selection workflow.
 
-Tests the top long (gated) and short (gated) candidates from Phases 1-2
+Tests the top long (gated) and short (gated) candidates from the retired phases.
 with various ATR-based dynamic exit configurations on both the research
 walk-forward and the dev holdout (insight only).
 

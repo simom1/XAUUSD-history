@@ -248,13 +248,13 @@ class BacktestEngine:
     def _session_masks(self, ts: np.ndarray, intraday_only: bool) -> tuple[np.ndarray, np.ndarray]:
         """Per-bar (is_flat_bar, entry_blocked) from UTC bar-start timestamps.
 
-        A bar "decides" at its CLOSE (start + 5m). The first bar whose close
-        time reaches the daily cutoff flattens the book; entries are blocked
-        once the close time falls inside the pre-cutoff buffer.
+        A bar "decides" at its CLOSE (start + cfg.bar_seconds). The first bar
+        whose close time reaches the daily cutoff flattens the book; entries
+        are blocked once the close time falls inside the pre-cutoff buffer.
         """
         cfg = self.cfg
         dt = pd.to_datetime(ts, unit="s")              # naive UTC bar starts
-        close_dt = pd.to_datetime(ts + 300, unit="s")  # bar close times
+        close_dt = pd.to_datetime(ts + cfg.bar_seconds, unit="s")  # bar close times
         day0 = dt.normalize()
 
         cutoff = day0 + _hhmm_to_td(cfg.eod_flat_utc)
