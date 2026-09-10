@@ -84,7 +84,8 @@ class BacktestEngine:
         flat, blocked = self._session_masks(ts, cfg.intraday_only)
         side_cost = cfg.side_cost_usd          # USD/oz per side (half of round-trip cost)
         comm_rate = cfg.commission_bps / 1e4   # of notional, per side
-        needs_atr = bool(cfg.stop_loss_atr or cfg.take_profit_atr or cfg.trailing_stop_atr)
+        needs_atr = bool(cfg.stop_loss_atr or cfg.take_profit_atr or cfg.trailing_stop_atr
+                         or cfg.trail_activate_atr or cfg.breakeven_activate_atr)
         if atr is None:
             if needs_atr:
                 raise ValueError("ATR exit configuration requires an atr series")
@@ -95,7 +96,8 @@ class BacktestEngine:
                 raise ValueError(f"atr length {len(atr_arr)} != bars {n}")
         has_protective = bool(cfg.stop_loss_usd or cfg.take_profit_usd or
                               cfg.stop_loss_atr or cfg.take_profit_atr or
-                              cfg.trailing_stop_atr)
+                              cfg.trailing_stop_atr or cfg.trail_activate_atr or
+                              cfg.breakeven_activate_atr)
         sl_usd = cfg.stop_loss_usd or 0.0
         tp_usd = cfg.take_profit_usd or 0.0
 
@@ -178,7 +180,7 @@ class BacktestEngine:
             # ---- 2) protective exits, intrabar via high/low ----
             if pos != 0.0 and has_protective:
                 sgn = 1.0 if pos > 0 else -1.0
-                stop_hit = trail_hit = tp_hit = False
+                stop_hit = trail_hit = be_hit = tp_hit = False
                 entry_atr = cur["entry_atr"]
                 stop_dist = sl_usd or 0.0
                 tp_dist = tp_usd or 0.0
@@ -186,29 +188,48 @@ class BacktestEngine:
                     stop_dist = max(stop_dist, (cfg.stop_loss_atr or 0.0) * entry_atr)
                     tp_dist = max(tp_dist, (cfg.take_profit_atr or 0.0) * entry_atr)
                 trail_dist = (cfg.trailing_stop_atr or 0.0) * entry_atr if entry_atr is not None else 0.0
+                act_dist = (cfg.trail_activate_atr or 0.0) * entry_atr \
+                    if (trail_dist and entry_atr is not None) else 0.0
+                be_dist = (cfg.breakeven_activate_atr or 0.0) * entry_atr if entry_atr is not None else 0.0
                 if pos > 0:
                     cur["best_px"] = max(cur["best_px"], h[i])
+                    profit = cur["best_px"] - entry_px
+                    trail_armed = act_dist <= 0.0 or profit >= act_dist
+                    be_armed = be_dist > 0.0 and profit >= be_dist
                     if stop_dist and l[i] <= entry_px - stop_dist:
                         stop_hit = True
-                    if trail_dist and l[i] <= cur["best_px"] - trail_dist:
+                    if trail_dist and trail_armed and l[i] <= cur["best_px"] - trail_dist:
                         trail_hit = True
+                    if be_armed and l[i] <= entry_px:
+                        be_hit = True
                     if tp_dist and h[i] >= entry_px + tp_dist:
                         tp_hit = True
                 else:
                     cur["best_px"] = min(cur["best_px"], l[i])
+                    profit = entry_px - cur["best_px"]
+                    trail_armed = act_dist <= 0.0 or profit >= act_dist
+                    be_armed = be_dist > 0.0 and profit >= be_dist
                     if stop_dist and h[i] >= entry_px + stop_dist:
                         stop_hit = True
-                    if trail_dist and h[i] >= cur["best_px"] + trail_dist:
+                    if trail_dist and trail_armed and h[i] >= cur["best_px"] + trail_dist:
                         trail_hit = True
+                    if be_armed and h[i] >= entry_px:
+                        be_hit = True
                     if tp_dist and l[i] <= entry_px - tp_dist:
                         tp_hit = True
                 # OHLC has no intrabar ordering.  Any protective exit therefore
                 # fills at the bar's adverse extreme, including opening gaps.
+                # Exception: a breakeven stop sits exactly at the entry fill, so
+                # its fill is the entry price itself.  Priority runs from the
+                # worst fill (stop) to the best (take profit).
                 if stop_hit:
                     _close_trade(i, l[i] if pos > 0 else h[i], "stop_loss")
                     locked_direction = sgn
                 elif trail_hit:
                     _close_trade(i, l[i] if pos > 0 else h[i], "trailing_stop")
+                    locked_direction = sgn
+                elif be_hit:
+                    _close_trade(i, entry_px, "breakeven")
                     locked_direction = sgn
                 elif tp_hit:
                     _close_trade(i, l[i] if pos > 0 else h[i], "take_profit")

@@ -12,3 +12,6 @@ venv/
 *.log
 .DS_Store
 Thumbs.db
+
+# Tool runtime data
+.opencode/

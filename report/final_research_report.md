@@ -53,10 +53,14 @@ presentation.
 - The same study was run at 15 minutes (`final_research_report_15m.md`):
   independent nested walk-forward mining found no candidate (4 folds, 4
   different picks), and the locked 5-minute specification transferred to
-  15-minute bars in-sample (research Sharpe +1.56) but failed the
-  diagnostic segment (Sharpe -1.70) exactly as at 5 minutes. The failure
+  15-minute bars with a positive but weaker edge (research Sharpe +1.20,
+  350 trades, win rate 55.7%, zero same-bar conflicts) and failed the
+  diagnostic segment (Sharpe -0.89) exactly as at 5 minutes. The failure
   is regime dependent, not timeframe dependent. This strengthens, and does
-  not change, the conclusion above.
+  not change, the conclusion above. Two earlier transfer runs are
+  superseded (inverted short-leg direction, then a 5m annualization
+  constant that inflated Sharpe by sqrt(3)); see the audit note in the 15m
+  report.
 
 ## Next independent validation
 

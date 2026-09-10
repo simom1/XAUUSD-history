@@ -11,10 +11,10 @@
 
 | fold | window | long | short | exit | train_sharpe | test_pnl | test_sharpe | test_maxdd | test_trades | conflicts |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| f1 | 2024-03-07->2024-09-06 | long:bb_squeeze:W672:T1.5:H4:trend_adx:new_york | short:close_vs_ema200:W2016:T1.5:H28:trend_adx:all | none | 7.386 | -70.86 | -0.914 | -131.31 | 84 | 0 |
-| f2 | 2024-09-08->2025-03-07 | long:atr_28_pct:W2016:T1.5:H28:trend:london | short:rsi_14:W672:T2:H4:none:overlap | none | 4.838 | -50.7 | -1.631 | -84.28 | 35 | 0 |
-| f3 | 2025-03-09->2025-09-07 | long:natr_14:W672:T1.5:H28:none:all | short:close_vs_ema200:W672:T2:H28:trend_adx:overlap | none | 3.903 | 24.62 | 0.256 | -179.33 | 58 | 0 |
-| f4 | 2025-09-07->2026-03-09 | long:natr_14:W672:T1.5:H28:trend_not_choppy:all | short:aroon_down_25:W672:T2:H28:none:all | none | 4.205 | 407.37 | 1.449 | -252.98 | 42 | 2 |
+| f1 | 2024-03-07->2024-09-06 | long:bb_squeeze:W672:T1.5:H4:trend_adx:new_york | short:close_vs_ema200:W2016:T1.5:H28:trend_adx:all | none | 4.264 | -70.86 | -0.914 | -131.31 | 84 | 0 |
+| f2 | 2024-09-08->2025-03-07 | long:atr_28_pct:W2016:T1.5:H28:trend:london | short:rsi_14:W672:T2:H4:none:overlap | none | 2.793 | -50.7 | -1.631 | -84.28 | 35 | 0 |
+| f3 | 2025-03-09->2025-09-07 | long:natr_14:W672:T1.5:H28:none:all | short:close_vs_ema200:W672:T2:H28:trend_adx:overlap | none | 2.253 | 24.62 | 0.256 | -179.33 | 58 | 0 |
+| f4 | 2025-09-07->2026-03-09 | long:natr_14:W672:T1.5:H28:trend_not_choppy:all | short:aroon_down_25:W672:T2:H28:none:all | none | 2.428 | 407.37 | 1.449 | -252.98 | 42 | 2 |
 
 ## Consensus
 

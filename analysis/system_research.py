@@ -32,6 +32,18 @@ EXITS = (
     ("trail4", {"trailing_stop_atr": 4.0}),
     ("target3", {"take_profit_atr": 3.0}),
     ("stop2_trail3", {"stop_loss_atr": 2.0, "trailing_stop_atr": 3.0}),
+    # --- scalping ladder (preregistered; tight protective + trailing styles) ---
+    ("stop1", {"stop_loss_atr": 1.0}),
+    ("stop1_5", {"stop_loss_atr": 1.5}),
+    ("trail1", {"trailing_stop_atr": 1.0}),
+    ("trail1_5", {"trailing_stop_atr": 1.5}),
+    ("trail2", {"trailing_stop_atr": 2.0}),
+    ("trailtp05", {"trail_activate_atr": 1.0, "trailing_stop_atr": 0.5}),
+    ("trailtp10", {"trail_activate_atr": 1.0, "trailing_stop_atr": 1.0}),
+    ("be10", {"breakeven_activate_atr": 1.0}),
+    ("be15", {"breakeven_activate_atr": 1.5}),
+    ("stop1_5_trail2", {"stop_loss_atr": 1.5, "trailing_stop_atr": 2.0}),
+    ("be10_trail3", {"breakeven_activate_atr": 1.0, "trailing_stop_atr": 3.0}),
 )
 
 
@@ -82,9 +94,9 @@ def session_mask(ts: np.ndarray, name: str, bar_seconds: int = 300) -> np.ndarra
 
 
 def regime_mask(df: pd.DataFrame, side: str, name: str, gates: dict[str, np.ndarray] | None = None) -> np.ndarray:
-    g = gates if gates is not None else build_gates(df)
     if name == "none":
         return np.ones(len(df), dtype=bool)
+    g = gates if gates is not None else build_gates(df)
     trend = g["trend_up"] if side == "long" else g["trend_down"]
     if name == "trend":
         return trend
@@ -143,17 +155,24 @@ def bar_metrics(result, lo: int = 0, hi: int | None = None, ann: float = ANN) ->
 def run_engine(df: pd.DataFrame, long: Component | None, short: Component | None,
                exit_name: str = "none", factors: pd.DataFrame | None = None,
                gates: dict[str, np.ndarray] | None = None, oz: float = OZ,
-               bar_seconds: int = 300):
-    exit_args = dict(EXITS)[exit_name]
+               bar_seconds: int = 300, exit_kwargs: dict | None = None,
+               round_trip_cost: float | None = None, ann: float = ANN):
+    """exit_kwargs overrides the named EXITS entry (or supplies one directly).
+
+    ann is the Sharpe annualization root and must match the fed bar length
+    (sqrt(288*252) for 5m bars, sqrt(96*252) for 15m bars)."""
+    exit_args = dict(EXITS)[exit_name] if exit_kwargs is None else dict(exit_kwargs)
     target, conflicts = system_target(df, long, short, factors, gates, oz,
                                       bar_seconds=bar_seconds)
-    result = BacktestEngine(BacktestConfig(max_position_oz=oz, bar_seconds=bar_seconds,
-                                           **exit_args)).run(
+    cfg_kwargs = dict(max_position_oz=oz, bar_seconds=bar_seconds, **exit_args)
+    if round_trip_cost is not None:
+        cfg_kwargs["round_trip_cost_usd"] = round_trip_cost
+    result = BacktestEngine(BacktestConfig(**cfg_kwargs)).run(
         df, target, atr=df["atr_14"].to_numpy(float) if exit_args else None,
         meta={"long": asdict(long) if long else None, "short": asdict(short) if short else None,
               "exit": exit_name, "conflicts": conflicts},
     )
-    return result, target, bar_metrics(result), conflicts
+    return result, target, bar_metrics(result, ann=ann), conflicts
 
 
 def fast_component_score(df: pd.DataFrame, component: Component, factors: pd.DataFrame | None = None,
@@ -192,7 +211,8 @@ def vol_scaled_target(df: pd.DataFrame, long: Component | None, short: Component
                       ref_oz: float = 1.0, med_window: int = 2016, min_periods: int = 288,
                       floor: float = 0.25, cap: float = 2.0,
                       factors: pd.DataFrame | None = None,
-                      gates: dict[str, np.ndarray] | None = None) -> tuple[np.ndarray, int]:
+                      gates: dict[str, np.ndarray] | None = None,
+                      bar_seconds: int = 300) -> tuple[np.ndarray, int]:
     """ATR-scaled single-account target.
 
     The base signal is the unified ±1 oz path; the size is decided at the
@@ -204,7 +224,8 @@ def vol_scaled_target(df: pd.DataFrame, long: Component | None, short: Component
     data up to its close only.  The z-signal warm-up outlasts the median
     warm-up, so no live decision depends on the floor fallback.
     """
-    base, conflicts = system_target(df, long, short, factors, gates, oz=1.0)
+    base, conflicts = system_target(df, long, short, factors, gates, oz=1.0,
+                                    bar_seconds=bar_seconds)
     size = atr_size_series(df["atr_14"].to_numpy(float), ref_oz, med_window,
                            min_periods, floor, cap)
     prev = np.r_[0.0, base[:-1]]

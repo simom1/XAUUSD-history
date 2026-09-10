@@ -87,7 +87,8 @@ def main():
             for s in shorts:
                 for exit_name, _ in EXITS:
                     result, _, metrics, conflicts = run_engine(train, l["component"], s["component"], exit_name,
-                                                               f_train, g_train, bar_seconds=BAR_SECONDS)
+                                                               f_train, g_train, bar_seconds=BAR_SECONDS,
+                                                               ann=ANN_15M)
                     avg = result.trades.net_pnl.mean() if not result.trades.empty else -np.inf
                     if len(result.trades) >= MIN_TRAIN_TRADES and avg > 0:
                         candidates.append((metrics["sharpe"], metrics, l["component"], s["component"], exit_name, conflicts))

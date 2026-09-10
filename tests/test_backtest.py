@@ -3,10 +3,11 @@ from __future__ import annotations
 import unittest
 
 import numpy as np
+import pandas as pd
 
 from backtest import BacktestConfig, BacktestEngine
 from backtest.validate import _mk_df, prefix_consistency_check, synthetic_pnl_check
-from analysis.system_research import unified_targets
+from analysis.system_research import Component, unified_targets, vol_scaled_target
 
 
 class _Causal:
@@ -121,6 +122,22 @@ class BacktestEngineTest(unittest.TestCase):
         engine = BacktestEngine(BacktestConfig(intraday_only=False))
         self.assertTrue(prefix_consistency_check(engine, df, _Causal(), verbose=False))
         self.assertFalse(prefix_consistency_check(engine, df, _FutureReading(), verbose=False))
+
+    def test_vol_scaled_target_forwards_bar_seconds(self):
+        # One long signal on a bar starting 16:50 UTC: with 5m bars it closes
+        # 16:55 (inside london), with 15m bars 17:05 (outside).  Constant atr
+        # pins the size series at 1.0, so the target isolates session handling.
+        t0 = int(pd.Timestamp("2024-01-03 16:50:00").timestamp())
+        ts = [t0 - 300 * (9 - i) for i in range(10)]
+        df = pd.DataFrame({"timestamp": ts, "open": 100.0, "high": 100.0,
+                           "low": 100.0, "close": 100.0, "atr_14": 1.0})
+        factors = pd.DataFrame({"plus_di_14": [0.0] * 9 + [400.0]})
+        long = Component("long", "plus_di_14", "high", 6, 1.0, 10, "none", "london")
+        kwargs = dict(med_window=6, min_periods=3, factors=factors)
+        tgt_300, _ = vol_scaled_target(df, long, None, bar_seconds=300, **kwargs)
+        tgt_900, _ = vol_scaled_target(df, long, None, bar_seconds=900, **kwargs)
+        self.assertEqual(tgt_300[-1], 1.0)
+        self.assertEqual(np.abs(tgt_900).max(), 0.0)
 
 
 if __name__ == "__main__":

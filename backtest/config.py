@@ -32,6 +32,14 @@ class BacktestConfig:
     take_profit_atr: float | None = None
     trailing_stop_atr: float | None = None
 
+    # Arming thresholds (x ATR at entry) for scalping-style exits:
+    # - trail_activate_atr: the trailing stop only arms once the best price has
+    #   moved this far in favor (trailing take-profit).  None = always armed.
+    # - breakeven_activate_atr: once profit reaches this distance, an
+    #   exit-no-worse-than-entry stop is active.  None = disabled.
+    trail_activate_atr: float | None = None
+    breakeven_activate_atr: float | None = None
+
     @property
     def side_cost_usd(self) -> float:
         """Friction per ounce for ONE side (entry or exit)."""
