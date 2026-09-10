@@ -25,6 +25,29 @@ presentation.
 - 2026-03-10 to 2026-09-09 may be inspected for diagnosis but may not select
   parameters or support a pass/fail claim.
 
+## Exit-design findings (2026-09-10)
+
+- Nested walk-forward on the research slice
+  (`single_account_walkforward.md`): no static candidate. Each of the 4 folds
+  picked a different long/short component pair; the hold-expiry exit (`none`)
+  won 3 of 4 folds, consistent with the attribution that fixed ATR stops
+  destroy the edge.
+- Catastrophic-stop ladder (`catastrophic_stop_study.md`, top-3x3 pairs,
+  research slice only): 2.5-8x ATR stops trigger in 11-40% of trades -- they
+  are regular exits, not insurance -- and cut the no-exit edge by 19-91%.
+  12-16x ATR triggers only 1.6-3.4% of trades and retains 93-96% of the PnL:
+  a genuine disaster cap at a modest, measured cost. Without any stop the
+  worst single trade is -$64 to -$121 at 1 oz, already bounded by the
+  hold-based expiry and the daily session flat.
+- Volatility-targeted sizing (`vol_target_sizing.md`, legacy attribution
+  signals, pre-specified rule, research slice only): freezing
+  oz = clip(median(ATR_14, 2016)/ATR_14, 0.25, 2.0) at each episode's
+  entry/reversal bar keeps the trade stream identical to fixed 1 oz
+  (1,240 trades) but lifts research Sharpe 0.83 -> 1.14 and cuts maxDD
+  -$902 -> -$547 at 0.87 oz average exposure. Robust across the reported
+  floor/cap grid; nothing is selected from it. This is a sizing layer for
+  the final-judgment spec, not a new signal candidate.
+
 ## Next independent validation
 
 Accumulate at least six continuous months of new data after 2026-09-09.  Then

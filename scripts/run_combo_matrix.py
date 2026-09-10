@@ -419,7 +419,7 @@ def main() -> None:
     L.append("- Combos share the same W and T for both legs (same-scale extremes); "
              "per-leg asymmetry is a possible later refinement.")
     L.append("- NaN z-scores (warm-up, holiday flat candles) never trigger entries.")
-    L.append("- Margin/leverage not modeled (fixed 100 oz).")
+    L.append(f"- Margin/leverage not modeled (fixed {OZ:.0f} oz).")
 
     out = REPORTS / f"combo_matrix{suffix}.md"
     out.write_text("\n".join(L) + "\n", encoding="utf-8")

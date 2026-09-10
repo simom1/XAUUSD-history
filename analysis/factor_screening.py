@@ -24,7 +24,7 @@ from backtest import BacktestConfig, BacktestEngine
 
 COST_SIDE = 0.08          # USD/oz per side (0.16 all-in round trip)
 ANN = np.sqrt(288 * 252)  # annualization for 5m bars (library convention)
-OZ = 100.0                # 1 unit of signal = 100 oz
+OZ = 1.0                  # 1 unit of signal = 1 oz (0.01 lot)
 
 # ----------------------------------------------------------------------
 # Factor universe: 56 scale-free factors from the 64 indicator columns

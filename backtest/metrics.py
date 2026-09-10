@@ -101,9 +101,8 @@ def format_report(result, name: str = "strategy") -> str:
         f"| final equity | ${m['final_equity']:,.0f} |",
         f"| runtime | {result.runtime_sec:.1f}s |",
         "",
-        "> Note: fixed-oz position sizing; margin/interest not modeled. "
-        "Equity can go negative for always-in-market strategies at this leverage "
-        "(100 oz ≈ 2.6x notional on $100k at $2,600/oz).",
+        "> Note: fixed-oz position sizing; default is 1 oz (0.01 lot). "
+        "Margin, financing and liquidation are not modeled.",
     ]
 
     tr = result.trades

@@ -31,7 +31,7 @@ import pandas as pd
 from backtest import BacktestConfig, BacktestEngine
 from strategies import EmaCrossStrategy
 from analysis.factor_screening import (
-    ANN, OZ, Session, build_factors, build_path, config_metrics, decile_profile,
+    ANN, COST_SIDE, OZ, Session, build_factors, build_path, config_metrics, decile_profile,
     factor_list, forward_returns, ic_stats, pnl_from_path, path_from_targets,
     rolling_z,
 )
@@ -268,8 +268,8 @@ def main() -> None:
              f"{min(args.top, len(show))} by IS Sharpe (min {args.min_trades} IS trades)\n")
     L.append(md_table(show, floatfmt="{:+.2f}") + "\n")
     L.append(f"Full grid: `report/factor_grid_results.csv` ({n_cfg} configs). "
-             "Columns `is_*`/`oos_*` are in/out-of-sample; `pnl` in USD on 100 oz; "
-             "`avg_usd` = average NET PnL per trade after the $16 cost hurdle.\n")
+             f"Columns `is_*`/`oos_*` are in/out-of-sample; `pnl` in USD on {OZ:.0f} oz; "
+             f"`avg_usd` = average NET PnL per trade after the ${2 * COST_SIDE * OZ:.2f} cost hurdle.\n")
     if not conf_df.empty:
         L.append("## Engine confirmation (top configs, full sample)\n")
         L.append(md_table(conf_df, floatfmt="{:+.2f}") + "\n")
@@ -286,7 +286,7 @@ def main() -> None:
     L.append("- 22 holiday flat candles produce structural NaNs in 4 factors; NaN never "
              "generates entries (comparisons with NaN are False).")
     L.append("- No volume data exists on Gate.io TradFi klines; volume factors out of scope.")
-    L.append("- Margin/leverage not modeled (fixed 100 oz ~ 2.6x notional on $100k).")
+    L.append(f"- Margin/leverage not modeled (fixed {OZ:.0f} oz).")
 
     out = REPORTS / "factor_screening.md"
     out.write_text("\n".join(L) + "\n", encoding="utf-8")

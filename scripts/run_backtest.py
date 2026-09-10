@@ -34,8 +34,8 @@ def main() -> None:
     ap.add_argument("--cost-rt", type=float, default=0.16,
                     help="all-in round-trip cost USD/oz (spread+slippage+commission)")
     ap.add_argument("--commission-bps", type=float, default=0.0)
-    ap.add_argument("--capital", type=float, default=100_000.0)
-    ap.add_argument("--oz", type=float, default=100.0, help="max position in ounces")
+    ap.add_argument("--capital", type=float, default=10_000.0)
+    ap.add_argument("--oz", type=float, default=1.0, help="max position in ounces; 1 oz = 0.01 lot")
     ap.add_argument("--sl", type=float, default=None, help="stop loss USD/oz")
     ap.add_argument("--tp", type=float, default=None, help="take profit USD/oz")
     ap.add_argument("--overnight", action="store_true", help="disable intraday flat")

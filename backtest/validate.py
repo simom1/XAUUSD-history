@@ -21,7 +21,7 @@ def _mk_df(rows: list[tuple[int, float, float, float, float]], t0: int = 0) -> p
 def synthetic_pnl_check(verbose: bool = True) -> None:
     """Hand-computed expectations; any mismatch means broken accounting."""
     cfg = BacktestConfig(round_trip_cost_usd=0.0, commission_bps=0.0,
-                         intraday_only=False)
+                         intraday_only=False, max_position_oz=100.0)
     eng = BacktestEngine(cfg)
     rows = [(100, 100.5, 99.5, 100.2), (100.2, 101, 100, 101),
             (101, 102, 100.8, 102), (103, 103.5, 102.5, 103)]
@@ -35,7 +35,7 @@ def synthetic_pnl_check(verbose: bool = True) -> None:
     assert abs(t["entry_px"] - 100.2) < 1e-9 and abs(t["exit_px"] - 103.0) < 1e-9
     assert abs(t["net_pnl"] - 280.0) < 1e-9, t["net_pnl"]
     assert t["bars_held"] == 2
-    assert abs(r.equity[-1] - (100_000 + 280)) < 1e-9
+    assert abs(r.equity[-1] - (10_000 + 280)) < 1e-9
 
     # --- short: target -100 decided at close b1 -> fill open b2 = 101.0,
     #           flat decided at close b2 -> fill open b3 = 103.0
@@ -43,10 +43,10 @@ def synthetic_pnl_check(verbose: bool = True) -> None:
     t = r.trades.iloc[0]
     assert abs(t["entry_px"] - 101.0) < 1e-9 and abs(t["exit_px"] - 103.0) < 1e-9
     assert abs(t["net_pnl"] - (-200.0)) < 1e-9, t["net_pnl"]
-    assert abs(r.equity[-1] - (100_000 - 200)) < 1e-9
+    assert abs(r.equity[-1] - (10_000 - 200)) < 1e-9
 
     # --- TP: exit at bar low under the deliberately conservative OHLC rule.
-    eng2 = BacktestEngine(BacktestConfig(round_trip_cost_usd=0,
+    eng2 = BacktestEngine(BacktestConfig(round_trip_cost_usd=0, max_position_oz=100.0,
                                          intraday_only=False,
                                          stop_loss_usd=1.0, take_profit_usd=1.0))
     r = eng2.run(df, np.array([100, 100, 0, 0], float))
@@ -62,7 +62,7 @@ def synthetic_pnl_check(verbose: bool = True) -> None:
     assert t["exit_reason"] == "stop_loss" and abs(t["exit_px"] - 99.0) < 1e-9
 
     # --- friction: 1.4/oz round-trip -> 0.7/oz/side
-    eng3 = BacktestEngine(BacktestConfig(round_trip_cost_usd=1.4,
+    eng3 = BacktestEngine(BacktestConfig(round_trip_cost_usd=1.4, max_position_oz=100.0,
                                          intraday_only=False))
     r = eng3.run(df, np.array([100, 100, 0, 0], float))
     t = r.trades.iloc[0]
@@ -70,7 +70,7 @@ def synthetic_pnl_check(verbose: bool = True) -> None:
     assert abs(t["costs"] - 140.0) < 1e-9
 
     # --- session flat: cutoff 00:10, block 0min -> forced exit at close 101.5
-    cfg4 = BacktestConfig(round_trip_cost_usd=0, intraday_only=True,
+    cfg4 = BacktestConfig(round_trip_cost_usd=0, max_position_oz=100.0, intraday_only=True,
                           eod_flat_utc="00:10", friday_flat_utc="00:10",
                           entry_block_minutes=0)
     r = BacktestEngine(cfg4).run(_mk_df(rows[:2]), np.array([100, 100], float))

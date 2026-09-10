@@ -30,10 +30,10 @@ class BacktestEngineTest(unittest.TestCase):
     def test_terminal_forced_close_updates_equity(self):
         df = _mk_df([(100, 100, 100, 100)] * 4)
         result = BacktestEngine(BacktestConfig(intraday_only=False)).run(
-            df, np.full(len(df), 100.0)
+            df, np.full(len(df), 1.0)
         )
-        self.assertAlmostEqual(result.equity[-1] - 100_000, result.trades.net_pnl.sum())
-        self.assertAlmostEqual(result.trades.net_pnl.sum(), -16.0)
+        self.assertAlmostEqual(result.equity[-1] - 10_000, result.trades.net_pnl.sum())
+        self.assertAlmostEqual(result.trades.net_pnl.sum(), -0.16)
 
     def test_gap_stop_uses_adverse_extreme(self):
         df = _mk_df([(100, 100, 100, 100), (100, 100, 100, 100),
@@ -83,8 +83,20 @@ class BacktestEngineTest(unittest.TestCase):
             np.array([True, False, False, True]),
             np.array([False, False, True, True]), 4, 4,
         )
-        np.testing.assert_array_equal(target, np.array([100.0, 100.0, -100.0, 0.0]))
+        np.testing.assert_array_equal(target, np.array([1.0, 1.0, -1.0, 0.0]))
         self.assertEqual(conflicts, 1)
+
+    def test_micro_lot_accounting_defaults(self):
+        df = _mk_df([(100, 100, 100, 100), (100, 100, 100, 100),
+                     (101, 101, 101, 101), (101, 101, 101, 101)])
+        result = BacktestEngine(BacktestConfig(intraday_only=False)).run(
+            df, np.array([1, 1, 0, 0], float))
+        trade = result.trades.iloc[0]
+        self.assertAlmostEqual(trade["gross_pnl"], 1.0)
+        self.assertAlmostEqual(trade["costs"], 0.16)
+        self.assertAlmostEqual(trade["net_pnl"], 0.84)
+        self.assertEqual(result.config.initial_capital, 10_000.0)
+        self.assertEqual(result.config.max_position_oz, 1.0)
 
     def test_prefix_check_recomputes_targets(self):
         df = _mk_df([(100, 101, 99, 100 + i) for i in range(10)])

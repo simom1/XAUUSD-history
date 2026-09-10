@@ -6,10 +6,10 @@ from dataclasses import dataclass
 @dataclass
 class BacktestConfig:
     # --- account ---
-    initial_capital: float = 100_000.0
+    initial_capital: float = 10_000.0
 
     # --- position sizing: targets are expressed in OUNCES (signed) ---
-    max_position_oz: float = 100.0   # engine clips |target| to this
+    max_position_oz: float = 1.0     # 0.01 lot = 1 oz
 
     # --- friction (all-in: spread + slippage + commission) ---
     round_trip_cost_usd: float = 0.16  # USD/oz paid per entry+exit round trip (Gate.io actual)

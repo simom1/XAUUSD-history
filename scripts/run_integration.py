@@ -78,7 +78,7 @@ def main() -> None:
     _, short_dec = masks_from_spec(short_cfg, zget, SHORT_FAMILY_EXT, None, _gate(gates, SHORT_GATE))
     target, conflicts = unified_targets(long_dec, short_dec, long_cfg["hold"], short_cfg["hold"])
     if np.max(np.abs(target)) > OZ:
-        raise RuntimeError("unified target exceeds 100 oz")
+        raise RuntimeError(f"unified target exceeds {OZ:g} oz")
 
     cfg = BacktestConfig(stop_loss_atr=2.5)
     result = BacktestEngine(cfg).run(df, target, atr=df["atr_14"].to_numpy(float),
@@ -97,7 +97,8 @@ def main() -> None:
         f"- data: {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} ({len(df):,} 5m bars)",
         f"- research period: {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[h_idx - 1]:%Y-%m-%d}",
         f"- consumed development set: {dev_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d}; not a validation result.",
-        "- execution: one $100,000 account, max 100 oz, next-open fills, $0.16/oz round-trip cost.",
+        f"- execution: one ${cfg.initial_capital:,.0f} account, max {OZ:g} oz (0.01 lot), "
+        "next-open fills, $0.16/oz round-trip cost.",
         "- exits: entry ATR(14) fixed stop 2.5×; all protective exits fill at the adverse bar extreme.",
         "- metric: annualized 5-minute USD PnL Sharpe (sqrt(288×252)); margin, financing and liquidation are not modeled.", "",
         "## Locked development specification", "",

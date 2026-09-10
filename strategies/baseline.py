@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-OZ_PER_UNIT = 100.0   # 1 unit of signal = 100 oz (~1 standard lot)
+OZ_PER_UNIT = 1.0     # 1 unit of signal = 1 oz (0.01 lot)
 
 
 class BaseStrategy:

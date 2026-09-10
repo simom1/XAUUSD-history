@@ -51,7 +51,7 @@ python scripts/run_backtest.py --strategy ema_cross_9_21 --save
 python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 ```
 
-**Baseline results (2023-09 → 2026-09, fixed 100 oz, $100k start):**
+**Baseline results (2023-09 → 2026-09, fixed 100 oz, $100k start — pre-revision convention; the engine now defaults to 1 oz = 0.01 lot on $10k):**
 
 | strategy | return | Sharpe | PF | win rate | trades | friction paid |
 |---|---:|---:|---:|---:|---:|---:|
@@ -66,9 +66,9 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 
 | | |
 |---|---|
-| Stage 1 — IC + grid | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — Spearman IC with monthly Newey-West t-stats over all 64 indicators, then a per-factor z-score grid (window W × threshold T × hold H) with IS/OOS 70/30 split and the $16/trade cost gate |
+| Stage 1 — IC + grid | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — Spearman IC with monthly Newey-West t-stats over all 64 indicators, then a per-factor z-score grid (window W × threshold T × hold H) with IS/OOS 70/30 split and the all-in per-trade cost gate |
 | Stage 2 — combos + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — one-sided re-test and pairwise combos ranked by expanding walk-forward. The last six months are now a consumed development set, not a final test. |
-| Reports | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
+| Reports | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · [`report/single_account_walkforward.md`](report/single_account_walkforward.md) · [`report/catastrophic_stop_study.md`](report/catastrophic_stop_study.md) · [`report/vol_target_sizing.md`](report/vol_target_sizing.md) · [`report/none_backtest_detail.md`](report/none_backtest_detail.md) · [`report/integrated_system.md`](report/integrated_system.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
 
 **Historical candidate (superseded)** — research slice 2023-09 → 2026-03:
 
@@ -89,6 +89,28 @@ Full-pool WF simulation (540 configs, re-picked each fold by train Sharpe): Shar
   plus_di-only trades at slightly lower Sharpe; at T=1.5 the overlap collapses to <6%.
 - Exploratory (not locked): `aroon_up_25` short (z<−1.5, W6048) — res Sharpe 1.42,
   +$724/trade, 170 trades, positive in all 4 folds.
+- Single-account nested walk-forward (0.01 lot): **no static candidate** — each of the
+  4 folds picked a different long/short pair; the hold-expiry exit (`none`) won 3/4 folds,
+  confirming that fixed ATR stops destroy the edge.
+- Catastrophic-stop ladder: 2.5–8×ATR stops trigger in 11–40% of trades (regular exits,
+  not insurance) and cut the no-exit edge by 19–91%; **12–16×ATR triggers only 1.6–3.4%
+  and retains 93–96%** — a deployable disaster cap. Worst single trade without a stop:
+  −$64 to −$121 at 1 oz, already bounded by hold expiry + daily flat.
+
+**Single-account revision (2026-09-10, current convention: 1 oz = 0.01 lot, $10k capital, $0.16/oz RT):**
+
+- Leg attribution of the legacy long/short spec: without protective exits all books are
+  positive (long +$1,166 / short +$339 / combined +$1,162, research period), but a fixed
+  2.5×ATR stop that fills at the adverse bar extreme flips the combined system to −$1,437
+  → [`report/system_attribution.md`](report/system_attribution.md)
+- Nested walk-forward that jointly selects long/short components **and** exit rules per
+  fold (training prefix only) found **no stable candidate** — no spec repeated in ≥3 folds
+  with positive test folds → [`report/single_account_walkforward.md`](report/single_account_walkforward.md)
+- Volatility-targeted sizing on the legacy signals (pre-specified rule, no search): freezing
+  `oz = clip(median(ATR₁₄, 2016)/ATR₁₄, 0.25, 2.0)` at each episode's entry/reversal bar keeps
+  the trade stream identical (1,240 trades) but lifts research Sharpe 0.83 → **1.14** and cuts
+  maxDD −$902 → **−$547** at 0.87 oz average exposure; robust across the reported floor/cap
+  grid (nothing selected from it) → [`report/vol_target_sizing.md`](report/vol_target_sizing.md)
 
 After six months of newly accumulated data, freeze a new judgment segment and run the pre-locked single-account specification once:
 
@@ -156,6 +178,10 @@ python scripts/run_combo_matrix.py
 ├── scripts/run_backtest.py       # backtest runner (validated)
 ├── scripts/run_screening.py      # stage-1 runner (IC + grid)
 ├── scripts/run_combo_matrix.py   # stage-2 runner (walk-forward + sealed holdout)
+├── scripts/run_system_attribution.py        # 1 oz leg/exit attribution of the legacy spec
+├── scripts/run_single_account_research.py   # nested walk-forward: joint signal + exit selection
+├── scripts/run_catastrophic_stop_study.py   # wide catastrophic-stop ladder (2.5-16x ATR)
+├── scripts/run_vol_target_study.py          # ATR vol-targeted sizing vs fixed 1 oz
 └── report/quant_analysis_report.html + backtest_*.md + factor_screening.md + combo_matrix.md
 ```
 
@@ -217,7 +243,7 @@ python scripts/run_backtest.py --strategy ema_cross_9_21 --save
 python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 ```
 
-**基线结果(2023-09 → 2026-09,固定100盎司,初始$100k):**
+**基线结果(2023-09 → 2026-09,固定100盎司,初始$100k——修订前口径;引擎现默认 1 oz = 0.01 手、$10k):**
 
 | 策略 | 收益 | Sharpe | PF | 胜率 | 笔数 | 摩擦成本 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -230,9 +256,9 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 
 | | |
 |---|---|
-| 第一阶段 — IC + 网格 | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — 64个指标的 Spearman IC(月度 Newey-West t 检验)+ 单因子 z 分数网格(窗口 W × 阈值 T × 持仓 H),IS/OOS 七三分割,$16/笔成本门槛 |
+| 第一阶段 — IC + 网格 | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — 64个指标的 Spearman IC(月度 Newey-West t 检验)+ 单因子 z 分数网格(窗口 W × 阈值 T × 持仓 H),IS/OOS 七三分割,按全包每笔成本设门槛 |
 | 第二阶段 — 组合 + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — 单边复测与两两组合，按扩张 walk-forward 排序；最后6个月现为已消费的开发集，不是终审数据。 |
-| 报告 | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
+| 报告 | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · [`report/single_account_walkforward.md`](report/single_account_walkforward.md) · [`report/catastrophic_stop_study.md`](report/catastrophic_stop_study.md) · [`report/vol_target_sizing.md`](report/vol_target_sizing.md) · [`report/none_backtest_detail.md`](report/none_backtest_detail.md) · [`report/integrated_system.md`](report/integrated_system.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
 
 **历史候选（已被修订流程取代）** — 研究切片 2023-09 → 2026-03:
 
@@ -248,6 +274,13 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 - 第一阶段网格是**双向**配置(z>+T 做多同时 z<−T 做空)。第二阶段的单边分解修正了归因:`plus_di` 的多头腿(研究期 +$160k)在双向配置里被亏损的空头腿掩盖;`aroon` 第一阶段的利润主要来自**空头腿**;`gap_pct` 的利润全部在多头腿。
 - 两两组合**冗余**:`aroon ∧ plus_di` 在 T=1.25 时保留 plus_di 单独交易的 89–96%,Sharpe 还略低;T=1.5 时重叠骤降到 <6%(笔数太少)。
 - 探索性(未锁定):`aroon_up_25` 做空(z<−1.5, W6048)— 研究Sharpe 1.42,+$724/笔,170笔,4折全正。
+
+**单账户修订(2026-09-10,现口径:1 oz = 0.01 手,$10k 本金,$0.16/oz 往返):**
+
+- 遗留多空规格的分腿归因:无保护退出时三组皆为正(多头 +$1,166 / 空头 +$339 / 合并 +$1,162,研究期),但固定 2.5×ATR、按 bar 不利极值成交的止损使合并系统转为 −$1,437 → [`report/system_attribution.md`](report/system_attribution.md)
+- 嵌套 walk-forward(每折仅在训练前缀内联合挑选多/空组件**与**退出规则)未找到稳定候选——没有规格在 ≥3 折重复出现且测试折为正 → [`report/single_account_walkforward.md`](report/single_account_walkforward.md)
+- 灾难止损阶梯:2.5–8×ATR 止损在 11–40% 的交易中触发(是常规退出而非保险),砍掉无止损边际的 19–91%;**12–16×ATR 仅触发 1.6–3.4%,保留 93–96% 的盈利**——可部署的灾难帽。无止损时最差单笔 −$64 至 −$121(1 oz),持仓到期 + 每日强平本身已构成风控边界 → [`report/catastrophic_stop_study.md`](report/catastrophic_stop_study.md)
+- 波动率目标仓位(遗留信号,预注册规则、不做搜索):在每个持仓片段的开仓/反转 bar 收盘冻结 `oz = clip(中位ATR₁₄(2016)/ATR₁₄, 0.25, 2.0)`,交易流与固定 1 oz 完全一致(1,240 笔),但研究期 Sharpe 0.83 → **1.14**,maxDD −$902 → **−$547**,平均敞口仅 0.87 oz;floor/cap 网格全部稳健(网格只报告、不挑选)→ [`report/vol_target_sizing.md`](report/vol_target_sizing.md)
 
 积累至少六个月新数据后，冻结新的判决区，再对预锁定的单账户规格只运行一次：
 
@@ -315,6 +348,10 @@ python scripts/run_combo_matrix.py
 ├── scripts/run_backtest.py       # 回测运行器(含验证)
 ├── scripts/run_screening.py      # 第一阶段运行器(IC + 网格)
 ├── scripts/run_combo_matrix.py   # 第二阶段运行器(walk-forward + 封存终审)
+├── scripts/run_system_attribution.py        # 1 oz 分腿/退出归因
+├── scripts/run_single_account_research.py   # 嵌套 walk-forward:信号+退出联合选择
+├── scripts/run_catastrophic_stop_study.py   # 宽灾难止损阶梯(2.5–16×ATR)
+├── scripts/run_vol_target_study.py          # ATR 波动率目标仓位 vs 固定 1 oz
 └── report/quant_analysis_report.html + backtest_*.md + factor_screening.md + combo_matrix.md
 ```
 
