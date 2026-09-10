@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 TRADING_DAYS = 252
+BARS_PER_DAY = 288
 
 
 def compute_metrics(result) -> dict:
@@ -18,12 +19,16 @@ def compute_metrics(result) -> dict:
     years = max((eq.index[-1] - eq.index[0]).total_seconds(), 1.0) / (365.25 * 86400)
     cagr = (1.0 + total_ret) ** (1.0 / years) - 1.0 if total_ret > -1 else -1.0
 
-    # daily Sharpe / Sortino from UTC-day resampled equity
+    # Research-wide headline metric: 5-minute dollar PnL Sharpe.  This is
+    # intentionally the same convention used by the screening pipeline.
+    bar_pnl = eq.diff().dropna()
+    sharpe = (float(bar_pnl.mean() / bar_pnl.std() * np.sqrt(BARS_PER_DAY * TRADING_DAYS))
+              if len(bar_pnl) > 2 and bar_pnl.std() > 0 else 0.0)
+    downside_pnl = bar_pnl[bar_pnl < 0]
+    sortino = (float(bar_pnl.mean() / downside_pnl.std() * np.sqrt(BARS_PER_DAY * TRADING_DAYS))
+               if len(downside_pnl) > 2 and downside_pnl.std() > 0 else 0.0)
+
     daily = eq.resample("1D").last().dropna()
-    r = daily.pct_change().dropna()
-    sharpe = float(r.mean() / r.std() * np.sqrt(TRADING_DAYS)) if len(r) > 2 and r.std() > 0 else 0.0
-    downside = r[r < 0]
-    sortino = float(r.mean() / downside.std() * np.sqrt(TRADING_DAYS)) if len(downside) > 2 and downside.std() > 0 else 0.0
 
     peak = eq.cummax()
     dd = eq / peak - 1.0
@@ -83,8 +88,8 @@ def format_report(result, name: str = "strategy") -> str:
         "|---|---:|",
         f"| total return | {m['total_return_pct']:+.2f}% |",
         f"| CAGR | {m['cagr_pct']:+.2f}% |",
-        f"| Sharpe (daily, ann.) | {m['sharpe']:.2f} |",
-        f"| Sortino | {m['sortino']:.2f} |",
+        f"| Sharpe (5m USD PnL, ann.) | {m['sharpe']:.2f} |",
+        f"| Sortino (5m USD PnL) | {m['sortino']:.2f} |",
         f"| max drawdown | {m['max_drawdown_pct']:.2f}% |",
         f"| trades | {m['n_trades']} ({m['avg_trades_per_day']:.1f}/day) |",
         f"| win rate | {m['win_rate_pct']:.1f}% |",

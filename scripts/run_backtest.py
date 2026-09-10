@@ -61,7 +61,7 @@ def main() -> None:
     result = strat.run(engine, df)
 
     if not args.no_check:
-        prefix_consistency_check(engine, df, strat.targets(df),
+        prefix_consistency_check(engine, df, strat,
                                  warmup_bars=strat.warmup_bars)
 
     report = format_report(result, name=strat.name)

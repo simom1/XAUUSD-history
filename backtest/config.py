@@ -25,6 +25,12 @@ class BacktestConfig:
     stop_loss_usd: float | None = None
     take_profit_usd: float | None = None
 
+    # ATR exits use the ATR value available at the entry decision.  All three
+    # use the deliberately conservative OHLC fill convention in the engine.
+    stop_loss_atr: float | None = None
+    take_profit_atr: float | None = None
+    trailing_stop_atr: float | None = None
+
     @property
     def side_cost_usd(self) -> float:
         """Friction per ounce for ONE side (entry or exit)."""

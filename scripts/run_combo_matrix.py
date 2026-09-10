@@ -2,7 +2,7 @@
 """Combination matrix + walk-forward selection for the surviving factors.
 
 Research mode (default):
-  0. seal the last --holdout-days as the final-judgment holdout (NEVER touched)
+  0. exclude the last --holdout-days as a consumed development segment
   1. calibrate the fast accounting vs the real engine on the research slice
   2. survivor neighborhood grid: 4 factors x {long, short} x W x T x H
   3. combination matrix: all pairwise AND-confirmed longs x W x T x H
@@ -11,7 +11,7 @@ Research mode (default):
   5. rank candidates by fold consistency -> report/combo_matrix.md
 
 Final-judgment mode (--final SPEC):
-  evaluate one locked config on the SEALED holdout with fast + engine
+  evaluate one locked config on the consumed development segment with fast + engine
   accounting. Run this once, after research is frozen.
 
 Usage:
@@ -42,30 +42,12 @@ from analysis.factor_screening import (
     rolling_z,
 )
 from analysis.combo_screening import (
-    SURVIVORS, evaluate, flatten, fold_list, holdout_split, leg_masks,
-    masks_from_spec, parse_spec, spec_string,
+    SURVIVORS, build_gates, evaluate, flatten, fold_list, holdout_split,
+    leg_masks, masks_from_spec, md_table, parse_spec, spec_string, walk_forward,
 )
 
 DATA = ROOT / "data" / "xauusd_5m_indicators.csv.gz"
 REPORTS = ROOT / "report"
-
-
-def md_table(df: pd.DataFrame, floatfmt: str = "{:.2f}") -> str:
-    if df.empty:
-        return "(empty)"
-    cols = list(df.columns)
-    lines = ["| " + " | ".join(cols) + " |",
-             "|" + "|".join("---:" for _ in cols) + "|"]
-    for _, r in df.iterrows():
-        cells = []
-        for col in cols:
-            v = r[col]
-            if isinstance(v, float):
-                cells.append(floatfmt.format(v) if pd.notna(v) else "-")
-            else:
-                cells.append(str(v))
-        lines.append("| " + " | ".join(cells) + " |")
-    return "\n".join(lines)
 
 
 def build_cfg_list(args) -> list[dict]:
@@ -86,12 +68,16 @@ def build_cfg_list(args) -> list[dict]:
     return cfgs
 
 
-def run_grid(cfgs, zget, ses, o, c, n, folds, progress: bool = True):
+def run_grid(cfgs, zget, ses, o, c, n, folds, progress: bool = True,
+             long_gate=None, short_gate=None,
+             atr=None, stop_atr=None, trail_atr=None, target_atr=None):
     rows = []
     total = len(cfgs)
     for i, cfg in enumerate(cfgs, 1):
-        ld, sd_ = masks_from_spec(cfg, zget)
-        ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, folds)
+        ld, sd_ = masks_from_spec(cfg, zget, long_gate=long_gate,
+                                  short_gate=short_gate)
+        ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, folds, atr,
+                      stop_atr, trail_atr, target_atr)
         if ev is None:
             continue
         base = dict(cfg)
@@ -101,50 +87,6 @@ def run_grid(cfgs, zget, ses, o, c, n, folds, progress: bool = True):
             print(f"    [{i:3d}/{total}] {cfg['factor']:36s} {cfg['side']:5s} "
                   f"W{cfg['win']} T{cfg['thr']:g} H{cfg['hold']}")
     return pd.DataFrame(rows)
-
-
-def walk_forward(grid: pd.DataFrame, folds, gate: int, zget, ses, o, c, n) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Per fold: pick best train-Sharpe config among gated ones; apply to the
-    test fold; aggregate the 4 fold segments into one walk-forward equity."""
-    picks = []
-    for f in folds:
-        k = f["name"]
-        cand = grid[(grid[f"{k}_train_trades"] >= gate) &
-                    (grid[f"{k}_train_avg"] > 0) & grid[f"{k}_train_sharpe"].notna()]
-        if cand.empty:
-            continue
-        best = cand.sort_values(f"{k}_train_sharpe", ascending=False).iloc[0]
-        picks.append({"fold": k, "test_window": f"{f['test_start']} -> {f['test_end']}",
-                      "spec": best["spec"],
-                      "train_sharpe": best[f"{k}_train_sharpe"],
-                      "train_trades": int(best[f"{k}_train_trades"]),
-                      "test_sharpe": best[f"{k}_test_sharpe"],
-                      "test_pnl": best[f"{k}_test_pnl"],
-                      "test_trades": int(best[f"{k}_test_trades"]),
-                      "test_avg": best[f"{k}_test_avg"],
-                      "test_pf": best[f"{k}_test_pf"]})
-    if not picks:
-        return pd.DataFrame(), pd.DataFrame()
-    picks_df = pd.DataFrame(picks)
-    # aggregate: rebuild each selected config's path, concatenate test segments
-    segs, tot_pnl, tot_tr, pos_folds = [], 0.0, 0, 0
-    for p in picks:
-        cfg = parse_spec(p["spec"])
-        ld, sd_ = masks_from_spec(cfg, zget)
-        ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, [])
-        B = ev["_B"]
-        f = next(x for x in folds if x["name"] == p["fold"])
-        seg = B[f["test_lo"]:f["test_hi"]]
-        segs.append(seg)
-        tot_pnl += float(seg.sum())
-        tot_tr += int(p["test_trades"])
-        pos_folds += int(p["test_pnl"] > 0)
-    cat = np.concatenate(segs)
-    agg = {"folds": len(picks), "folds_positive": pos_folds,
-           "wf_pnl": round(tot_pnl, 0), "wf_trades": tot_tr,
-           "wf_avg": round(tot_pnl / tot_tr, 2) if tot_tr else float("nan"),
-           "wf_sharpe": round(float(cat.mean() / cat.std() * ANN), 2) if cat.std() > 0 else 0.0}
-    return picks_df, pd.DataFrame([agg])
 
 
 def candidate_table(grid: pd.DataFrame, folds, min_trades: int) -> pd.DataFrame:
@@ -161,17 +103,23 @@ def candidate_table(grid: pd.DataFrame, folds, min_trades: int) -> pd.DataFrame:
     return ok
 
 
-def run_final(spec: str, holdout_days: int) -> None:
-    """Judgment day: evaluate one locked spec on the sealed holdout."""
+def run_final(spec: str, holdout_days: int, gate_names: str | None = None,
+              dev: bool = False) -> None:
+    """Judgment day: evaluate one locked spec on the sealed holdout.
+
+    With --dev the holdout is treated as a DEVELOPMENT set (insight only,
+    not judgment) - used after the holdout is consumed to test new ideas
+    (regime gates, short side, stop-loss) on the known down regime."""
     print(f"loading {DATA.name} ...")
     df = pd.read_csv(DATA)
     ts_sec = df["timestamp"].to_numpy(dtype=np.int64)
     h_idx, h_start = holdout_split(ts_sec, holdout_days)
     n = len(df)
     ts = pd.to_datetime(df["timestamp"], unit="s")
+    tag = "DEV (insight only)"
     print(f"full sample {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} ({n:,} bars)")
-    print(f"SEALED holdout: {h_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} "
-          f"({n - h_idx:,} bars) - judged exactly once\n")
+    print(f"{tag} holdout: {h_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} "
+          f"({n - h_idx:,} bars)\n")
 
     df_h = df.iloc[h_idx:].reset_index(drop=True)
     n_h = len(df_h)
@@ -183,7 +131,17 @@ def run_final(spec: str, holdout_days: int) -> None:
     F = build_factors(df)                      # causal indicators: slice is valid
     cfg = parse_spec(spec)
     zget = lambda fn, W: rolling_z(F[fn], W)[h_idx:]
-    ld, sd_ = masks_from_spec(cfg, zget)
+
+    long_gate = short_gate = None
+    if gate_names:
+        gates = build_gates(df)
+        gm = np.ones(n, dtype=bool)
+        for gn in gate_names.split(","):
+            gm &= gates[gn.strip()]
+        long_gate = gm[h_idx:]
+        print(f"gate: {gate_names} -> {long_gate.sum():,} of {n_h:,} bars allow long\n")
+
+    ld, sd_ = masks_from_spec(cfg, zget, long_gate=long_gate)
     ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n_h, [])
     if ev is None:
         print("no trades triggered on the holdout for this spec")
@@ -202,8 +160,11 @@ def run_final(spec: str, holdout_days: int) -> None:
     eng = res.equity[-1] - res.config.initial_capital
     print(f"engine accounting: pnl ${eng:,.0f}  trades {len(res.trades)}  "
           f"delta vs fast ${abs(eng - float(B.sum())):,.2f}")
-    verdict = "PASS" if (m["pnl"] > 0 and m["avg_usd"] > 0 and eng > 0) else "FAIL"
-    print(f"\nHOLDOUT VERDICT: {verdict}")
+    if dev:
+        verdict = "DEV-INSIGHT" + (" (would PASS)" if m["pnl"] > 0 else " (still negative)")
+    else:
+        verdict = "DEV-INSIGHT (not a validation verdict)"
+    print(f"\nDEVELOPMENT RESULT: {verdict}")
 
 
 def main() -> None:
@@ -221,11 +182,23 @@ def main() -> None:
     ap.add_argument("--confirm", type=int, default=4)
     ap.add_argument("--skip-confirm", action="store_true")
     ap.add_argument("--final", type=str, default=None,
-                    help="locked spec string; judges the sealed holdout")
+                    help="evaluates a spec on the consumed development segment")
+    ap.add_argument("--gate", type=str, default=None,
+                    help="comma-separated long regime gates: trend_up,adx_strong,not_choppy,aroon_up")
+    ap.add_argument("--short-gate", type=str, default=None,
+                    help="comma-separated short regime gates: trend_down,adx_strong,aroon_dn")
+    ap.add_argument("--dev", action="store_true",
+                    help="treat holdout as development set (insight, not judgment)")
+    ap.add_argument("--stop-atr", type=float, default=None,
+                    help="ATR stop-loss multiplier (e.g. 2.0 = exit at -2x ATR14)")
+    ap.add_argument("--trail-atr", type=float, default=None,
+                    help="ATR trailing-stop multiplier")
+    ap.add_argument("--target-atr", type=float, default=None,
+                    help="ATR profit-target multiplier")
     args = ap.parse_args()
 
     if args.final:
-        run_final(args.final, args.holdout_days)
+        run_final(args.final, args.holdout_days, args.gate, args.dev)
         return
 
     t0 = time.perf_counter()
@@ -236,7 +209,7 @@ def main() -> None:
     h_idx, h_start = holdout_split(ts_sec, args.holdout_days)
     n_full = len(df)
 
-    # ---------------- stage 0: seal holdout, slice research ----------------
+    # ---------------- stage 0: exclude consumed development data ----------------
     df = df.iloc[:h_idx].reset_index(drop=True)
     n = len(df)
     ts_sec = df["timestamp"].to_numpy(dtype=np.int64)
@@ -244,7 +217,7 @@ def main() -> None:
     o = df["open"].to_numpy(float)
     c = df["close"].to_numpy(float)
     print(f"full sample {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} ({n_full:,} bars)")
-    print(f"SEALED holdout (untouched): {h_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} "
+    print(f"consumed development set (excluded): {h_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} "
           f"({n_full - h_idx:,} bars)")
     print(f"research period: {ts_r.iloc[0]:%Y-%m-%d} -> {ts_r.iloc[-1]:%Y-%m-%d} ({n:,} bars)")
     folds = fold_list(ts_sec, n, args.folds, args.fold_days)
@@ -279,13 +252,45 @@ def main() -> None:
             zcache[key] = rolling_z(F[fn], W)
         return zcache[key]
 
+    # regime gates (Phase 1)
+    long_gate = short_gate = None
+    if args.gate or args.short_gate:
+        gates = build_gates(df)
+        if args.gate:
+            long_gate = np.ones(n, dtype=bool)
+            for gn in args.gate.split(","):
+                long_gate &= gates[gn.strip()]
+            print(f"    long gate: {args.gate} -> {long_gate.sum():,} of {n:,} bars")
+        if args.short_gate:
+            short_gate = np.ones(n, dtype=bool)
+            for gn in args.short_gate.split(","):
+                short_gate &= gates[gn.strip()]
+            print(f"    short gate: {args.short_gate} -> {short_gate.sum():,} of {n:,} bars")
+
     cfgs = build_cfg_list(args)
     n_single = sum(1 for x in cfgs if x["kind"] == "single")
     n_combo = len(cfgs) - n_single
     print(f"\n[3] grid: {n_single} single-factor neighborhood + {n_combo} pairwise AND combos")
-    grid = run_grid(cfgs, zget, ses, o, c, n, folds)
-    grid.to_csv(REPORTS / "combo_wf_results.csv", index=False)
-    print(f"    {len(grid)} evaluated configs -> combo_wf_results.csv")
+
+    # stop-loss / dynamic exit (Phase 3)
+    atr_arr = None
+    if args.stop_atr or args.trail_atr or args.target_atr:
+        atr_arr = df["atr_14"].to_numpy(float)
+        parts = []
+        if args.stop_atr: parts.append(f"stop={args.stop_atr:g}")
+        if args.trail_atr: parts.append(f"trail={args.trail_atr:g}")
+        if args.target_atr: parts.append(f"target={args.target_atr:g}")
+        print(f"    ATR stops: {', '.join(parts)} (atr_14)")
+
+    grid = run_grid(cfgs, zget, ses, o, c, n, folds,
+                    long_gate=long_gate, short_gate=short_gate,
+                    atr=atr_arr, stop_atr=args.stop_atr,
+                    trail_atr=args.trail_atr, target_atr=args.target_atr)
+    suffix = "_gated" if (args.gate or args.short_gate) else ""
+    if atr_arr is not None:
+        suffix += "_stopped"
+    grid.to_csv(REPORTS / f"combo_wf_results{suffix}.csv", index=False)
+    print(f"    {len(grid)} evaluated configs -> combo_wf_results{suffix}.csv")
 
     # ---------------- stage 4: walk-forward simulation ----------------
     print("\n[4] walk-forward selection simulation ...")
@@ -299,7 +304,10 @@ def main() -> None:
         gate = args.gate_fold_single if pname == "singles" else \
             args.gate_fold_combo if pname == "combos" else \
             min(args.gate_fold_single, args.gate_fold_combo)
-        picks, agg = walk_forward(sub, folds, gate, zget, ses, o, c, n)
+        picks, agg = walk_forward(sub, folds, gate, zget, ses, o, c, n,
+                                  long_gate=long_gate, short_gate=short_gate,
+                                  atr=atr_arr, stop_atr=args.stop_atr,
+                                  trail_atr=args.trail_atr, target_atr=args.target_atr)
         wf_tables[pname], wf_aggs[pname] = picks, agg
         if not agg.empty:
             print(f"    {pname:8s}: {agg.to_dict('records')[0]}")
@@ -315,8 +323,10 @@ def main() -> None:
         pool = pd.concat([cand_s.head(2), cand_c.head(2)]).drop_duplicates("spec")
         for i, (_, r) in enumerate(pool.iterrows(), 1):
             cfg = parse_spec(r["spec"])
-            ld, sd_ = masks_from_spec(cfg, zget)
-            ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, [])
+            ld, sd_ = masks_from_spec(cfg, zget, long_gate=long_gate,
+                                      short_gate=short_gate)
+            ev = evaluate(ld, sd_, cfg["hold"], ses, o, c, n, [], atr_arr,
+                          args.stop_atr, args.trail_atr, args.target_atr)
             B = ev["_B"]
             tgtz = np.zeros(n)
             for (f_, e_, s_, last) in ev["_trades"]:
@@ -339,8 +349,8 @@ def main() -> None:
     L = []
     L.append("# XAUUSD 5m - Combination Matrix + Walk-Forward Report\n")
     L.append(f"- data: `{DATA.name}` ({n_full:,} bars, {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d})")
-    L.append(f"- **SEALED holdout: {h_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} "
-             f"({n_full - h_idx:,} bars) - not used anywhere in this report**")
+    L.append(f"- **Consumed development set excluded: {h_start:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d} "
+             f"({n_full - h_idx:,} bars); it is not independent validation.**")
     L.append(f"- research period: {ts_r.iloc[0]:%Y-%m-%d} -> {ts_r.iloc[-1]:%Y-%m-%d} "
              f"({n:,} bars); the previous 70/30 OOS block is inside it")
     L.append(f"- cost model: all-in $0.16/oz round trip; 1 unit = {OZ:.0f} oz; "
@@ -360,8 +370,7 @@ def main() -> None:
              f"(train trades >= gate, train avg > 0) is applied to the untouched test fold; "
              "fold equities are concatenated per pool.")
     L.append("4. **Candidate ranking**: positive-fold count, then mean fold-test Sharpe, "
-             "then research Sharpe. Final judgment happens on the sealed holdout via "
-             "`--final SPEC` - run once, after research is frozen.")
+             "then research Sharpe. The excluded development segment cannot be used for a pass/fail claim.")
     L.append("\n## Fast-model calibration (research slice)\n")
     L.append(f"EMA 9/21: engine ${eng_net:,.0f} vs fast ${fast_net:,.0f} - "
              f"delta ${abs(eng_net - fast_net):.4f}.\n")
@@ -388,7 +397,7 @@ def main() -> None:
     if conf_rows:
         L.append("## Engine confirmation (top candidates, research slice)\n")
         L.append(md_table(pd.DataFrame(conf_rows)) + "\n")
-    L.append("## Locked candidates for holdout judgment\n")
+    L.append("## Development candidates (not approved)\n")
     top_pool = cand_c if not cand_c.empty else cand_s
     best = pd.concat([cand_s.head(1), cand_c.head(1)]).drop_duplicates("spec")
     if best.empty:
@@ -397,14 +406,13 @@ def main() -> None:
         for _, r in best.iterrows():
             L.append(f"- `{r['spec']}`  (pos_folds {r['pos_folds']}, "
                      f"wf_mean_sharpe {r['wf_mean_sharpe']:.2f}, res Sharpe {r['res_sharpe']})")
-        L.append("\nJudgment (run once, when research is frozen):\n")
+        L.append("\nDevelopment diagnostic command (not a judgment):\n")
         L.append("```")
         L.append(f"python scripts/run_combo_matrix.py --final \"{best.iloc[0]['spec']}\"")
         L.append("```")
     L.append("## Caveats\n")
-    L.append(f"- {len(grid)} configs were ranked (multiple testing); the walk-forward "
-             "folds are the honest selection surface, the sealed holdout is the only "
-             "truly untouched data.")
+    L.append(f"- {len(grid)} configs were ranked (multiple testing); the excluded development "
+             "set is consumed and cannot support a final validation claim.")
     L.append("- Fold test metrics attribute a trade to its ENTRY bar; a position open "
              "across a fold boundary is counted in the entry fold (engine-identical "
              "accounting, boundary effects <= 1 trade).")
@@ -413,7 +421,7 @@ def main() -> None:
     L.append("- NaN z-scores (warm-up, holiday flat candles) never trigger entries.")
     L.append("- Margin/leverage not modeled (fixed 100 oz).")
 
-    out = REPORTS / "combo_matrix.md"
+    out = REPORTS / f"combo_matrix{suffix}.md"
     out.write_text("\n".join(L) + "\n", encoding="utf-8")
     print(f"\nsaved: {out.relative_to(ROOT)}")
     print(f"total runtime: {time.perf_counter() - t0:.0f}s")

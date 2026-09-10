@@ -6,10 +6,10 @@
 
 | metric | value |
 |---|---:|
-| total return | -44.51% |
+| total return | -44.50% |
 | CAGR | -17.88% |
-| Sharpe (5m USD PnL, ann.) | -0.19 |
-| Sortino (5m USD PnL) | -0.23 |
+| Sharpe (daily, ann.) | -0.52 |
+| Sortino | -0.35 |
 | max drawdown | -126.36% |
 | trades | 5221 (5.6/day) |
 | win rate | 35.0% |
@@ -18,7 +18,7 @@
 | avg holding | 36.4 bars (182 min) |
 | exposure (time in market) | 90.0% |
 | total friction paid | $83,536 |
-| final equity | $55,494 |
+| final equity | $55,502 |
 | runtime | 0.1s |
 
 > Note: fixed-oz position sizing; margin/interest not modeled. Equity can go negative for always-in-market strategies at this leverage (100 oz ≈ 2.6x notional on $100k at $2,600/oz).

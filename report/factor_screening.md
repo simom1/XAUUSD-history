@@ -1,167 +1,174 @@
 # XAUUSD 5m - Factor Screening Report
 
--   data: `xauusd_5m_indicators.csv.gz` (211,242 bars, 2023-09-13 -> 2026-09-09)
--   IS/OOS split: first 70% IS (2023-09-13 -> 2025-10-16), last 30% OOS (2025-10-16 -> 2026-09-09)
--   cost model: all-in $0.16/oz round trip ($0.08/side); 1 unit = 100 oz
--   data quality: see `report/data_quality_5m.md` (verdict: clean; 22 holiday flat candles -> 88 structural NaN cells in 4 columns)
+> Research-only revision: 2026-03-10 onward is excluded from selection and remains a consumed development set.
+
+- data: `xauusd_5m_indicators.csv.gz` (175,475 bars, 2023-09-13 -> 2026-03-09)
+- IS/OOS split: first 70% IS (2023-09-13 -> 2025-06-10), last 30% OOS (2025-06-10 -> 2026-03-09)
+- cost model: all-in $0.16/oz round trip ($0.08/side); 1 unit = 100 oz
+- data quality: see `report/data_quality_5m.md` (verdict: clean; 22 holiday flat candles -> 88 structural NaN cells in 4 columns)
 
 ## Method
 
-1.  **Factor universe**: 56 scale-free factors derived from the 64-indicator set (price-level indicators converted to % distance / channel position).
-2.  **IC study**: monthly Spearman rank IC vs forward returns h in (12, 84, 288) bars (1h / ~7h / ~24h); selection uses IS months only, OOS Spearman reported as stability check.
-3.  **Grid backtest**: entry when trailing z-score (windows \[2016, 6048\]) crosses +/-\[1.5, 2.5\], fixed hold \[12, 84\] bars, long-when-high (momentum) vs long-when-low (reversal) both evaluated; exact engine accounting (next-open fills, session flat 21:00 UTC / Fri 20:45, entry block 15 min, $0.16 RT cost). Direction & params selected on IS; OOS untouched.
+1. **Factor universe**: 61 scale-free factors derived from the 64-indicator set (price-level indicators converted to % distance / channel position).
+2. **IC study**: monthly Spearman rank IC vs forward returns h in (12, 84, 288) bars (1h / ~7h / ~24h); selection uses IS months only, OOS Spearman reported as stability check.
+3. **Grid backtest**: entry when trailing z-score (windows [2016, 6048]) crosses +/-[1.5, 2.5], fixed hold [12, 84] bars, long-when-high (momentum) vs long-when-low (reversal) both evaluated; exact engine accounting (next-open fills, session flat 21:00 UTC / Fri 20:45, entry block 15 min, $0.16 RT cost). Direction & params selected on IS; OOS untouched.
 
 ## Fast-model calibration
 
-EMA 9/21 baseline: engine vs vectorized accounting (net $ over full sample): engine $51,598 vs fast $51,598 - delta $0.0000 (float noise).
+EMA 9/21 baseline: engine vs vectorized accounting (net $ over full sample): engine $-34,942 vs fast $-34,942 - delta $0.0000 (float noise).
 
 ## IC results (h = 84 bars ~ 7h, top 15 by |t|)
 
-| factor | ic\_mean | icir | t | pos\_pct | is\_spr | oos\_spr | months |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| clv | \-0.0074 | \-0.5010 | \-2.5500 | +0.2690 | \-0.0028 | \-0.0025 | 26 |
-| upper\_shadow\_pct | +0.0067 | +0.4550 | +2.3200 | +0.6540 | +0.0066 | +0.0044 | 26 |
-| kdj\_k | \-0.0180 | \-0.3250 | \-1.6600 | +0.4620 | \-0.0036 | \-0.0029 | 26 |
-| kdj\_d | \-0.0199 | \-0.3210 | \-1.6400 | +0.4620 | \-0.0039 | \-0.0044 | 26 |
-| kdj\_j | \-0.0119 | \-0.3190 | \-1.6300 | +0.4620 | \-0.0020 | \-0.0008 | 26 |
-| lower\_shadow\_pct | \-0.0043 | \-0.2960 | \-1.5100 | +0.3850 | \-0.0028 | \-0.0047 | 26 |
-| atr\_7\_pct | \-0.0237 | \-0.2940 | \-1.5000 | +0.5000 | +0.0043 | +0.0167 | 26 |
-| hl\_range\_pct | \-0.0179 | \-0.2920 | \-1.4900 | +0.4230 | +0.0029 | +0.0129 | 26 |
-| tr\_pct | \-0.0180 | \-0.2930 | \-1.4900 | +0.4230 | +0.0027 | +0.0132 | 26 |
-| hv\_20 | \-0.0238 | \-0.2790 | \-1.4200 | +0.4620 | +0.0036 | +0.0200 | 26 |
-| adx\_14 | \-0.0227 | \-0.2660 | \-1.3600 | +0.4620 | \-0.0152 | \-0.0105 | 26 |
-| stoch\_d\_14 | \-0.0152 | \-0.2590 | \-1.3200 | +0.4620 | \-0.0003 | \-0.0023 | 26 |
-| natr\_14 | \-0.0219 | \-0.2600 | \-1.3200 | +0.4230 | +0.0062 | +0.0144 | 26 |
-| stoch\_k\_14 | \-0.0138 | \-0.2550 | \-1.3000 | +0.4620 | +0.0003 | \-0.0014 | 26 |
-| williams\_r\_14 | \-0.0138 | \-0.2550 | \-1.3000 | +0.4620 | +0.0003 | \-0.0014 | 26 |
+| factor | ic_mean | icir | t | pos_pct | is_spr | oos_spr | months |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| upper_shadow_pct | +0.0093 | +0.6670 | +3.1300 | +0.7730 | +0.0095 | +0.0029 | 22 |
+| clv | -0.0055 | -0.4620 | -2.1700 | +0.3180 | -0.0029 | -0.0069 | 22 |
+| tr_pct | -0.0247 | -0.3900 | -1.8300 | +0.3640 | -0.0094 | +0.0278 | 22 |
+| hl_range_pct | -0.0246 | -0.3890 | -1.8200 | +0.3640 | -0.0093 | +0.0278 | 22 |
+| hv_20 | -0.0310 | -0.3500 | -1.6400 | +0.4550 | -0.0100 | +0.0342 | 22 |
+| atr_7_pct | -0.0285 | -0.3320 | -1.5600 | +0.4550 | -0.0081 | +0.0301 | 22 |
+| natr_14 | -0.0247 | -0.2740 | -1.2900 | +0.4550 | -0.0046 | +0.0269 | 22 |
+| hv_ratio | -0.0200 | -0.2340 | -1.1000 | +0.4550 | -0.0113 | +0.0312 | 22 |
+| bb_width | -0.0183 | -0.2220 | -1.0400 | +0.4090 | -0.0015 | +0.0280 | 22 |
+| atr_28_pct | -0.0204 | -0.2190 | -1.0300 | +0.4090 | -0.0019 | +0.0241 | 22 |
+| vol_percentile | -0.0194 | -0.1870 | -0.8800 | +0.5910 | -0.0123 | +0.0103 | 22 |
+| kdj_j | -0.0051 | -0.1720 | -0.8100 | +0.5000 | +0.0019 | -0.0178 | 22 |
+| adx_14 | -0.0141 | -0.1680 | -0.7900 | +0.5000 | -0.0065 | -0.0272 | 22 |
+| kdj_k | -0.0072 | -0.1600 | -0.7500 | +0.5000 | +0.0027 | -0.0294 | 22 |
+| macd_hist_pct | +0.0042 | +0.1570 | +0.7400 | +0.6820 | +0.0051 | -0.0047 | 22 |
 
 (full table: `report/factor_ic_results.csv`, horizons 12/84/288)
 
 ## Single-factor grid - top 25 by IS Sharpe (min 150 IS trades)
 
-| rank | factor | win | thr | long\_when | hold | is\_sharpe | is\_pnl | is\_trades | is\_avg\_usd | is\_pf | oos\_sharpe | oos\_pnl | oos\_trades | oos\_avg\_usd | oos\_pf |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | upper\_shadow\_pct | 6048 | +1.50 | high | 84 | +1.63 | +125023.00 | 1572 | +78.29 | +1.18 | \-0.57 | \-60094.00 | 689 | \-84.39 | +0.94 |
-| 2 | upper\_shadow\_pct | 2016 | +1.50 | high | 84 | +1.62 | +125310.00 | 1598 | +77.20 | +1.18 | \-0.82 | \-86271.00 | 689 | \-122.38 | +0.92 |
-| 3 | hl\_range\_pct | 6048 | +1.50 | high | 84 | +1.52 | +111310.00 | 1003 | +110.56 | +1.21 | \-1.23 | \-123384.00 | 443 | \-277.58 | +0.85 |
-| 4 | gap\_pct | 6048 | +1.50 | low | 84 | +1.51 | +54492.00 | 261 | +208.78 | +1.49 | +0.54 | +33114.00 | 77 | +430.05 | +1.20 |
-| 5 | tr\_pct | 6048 | +1.50 | high | 84 | +1.49 | +108197.00 | 993 | +108.54 | +1.20 | \-1.26 | \-125702.00 | 439 | \-285.39 | +0.85 |
-| 6 | lower\_shadow\_pct | 2016 | +1.50 | high | 84 | +1.47 | +113584.00 | 1597 | +70.02 | +1.16 | \-0.95 | \-98649.00 | 688 | \-140.82 | +0.91 |
-| 7 | aroon\_up\_25 | 6048 | +1.50 | high | 12 | +1.46 | +29367.00 | 370 | +79.37 | +1.37 | +1.08 | +44522.00 | 463 | +96.16 | +1.16 |
-| 8 | lower\_shadow\_pct | 6048 | +1.50 | high | 84 | +1.44 | +110983.00 | 1578 | +69.21 | +1.16 | \-1.17 | \-121897.00 | 688 | \-174.61 | +0.88 |
-| 9 | stoch\_d\_14 | 6048 | +1.50 | low | 84 | +1.40 | +102355.00 | 1427 | +70.38 | +1.17 | \-0.55 | \-55320.00 | 623 | \-85.70 | +0.94 |
-| 10 | close\_vs\_wma20 | 2016 | +2.50 | low | 84 | +1.39 | +81657.00 | 605 | +134.97 | +1.26 | \-1.62 | \-135093.00 | 265 | \-509.78 | +0.75 |
-| 11 | plus\_di\_14 | 6048 | +2.50 | high | 84 | +1.30 | +53372.00 | 392 | +136.15 | +1.32 | +0.44 | +21564.00 | 165 | +130.69 | +1.11 |
-| 12 | upper\_shadow\_pct | 2016 | +2.50 | high | 84 | +1.28 | +76641.00 | 977 | +78.45 | +1.19 | \-0.42 | \-34896.00 | 418 | \-83.48 | +0.94 |
-| 13 | stoch\_d\_14 | 2016 | +1.50 | low | 84 | +1.25 | +91346.00 | 1435 | +62.43 | +1.14 | \-0.66 | \-65948.00 | 623 | \-103.03 | +0.93 |
-| 14 | hl\_range\_pct | 2016 | +1.50 | high | 84 | +1.18 | +86856.00 | 1038 | +83.68 | +1.16 | \-1.22 | \-121240.00 | 474 | \-255.78 | +0.85 |
-| 15 | tr\_pct | 2016 | +1.50 | high | 84 | +1.14 | +83904.00 | 1026 | +81.78 | +1.15 | \-1.22 | \-120254.00 | 469 | \-256.41 | +0.85 |
-| 16 | close\_vs\_sma10 | 2016 | +2.50 | low | 84 | +1.09 | +65820.00 | 651 | +101.11 | +1.19 | \-1.61 | \-137197.00 | 292 | \-469.85 | +0.76 |
-| 17 | close\_vs\_ema12 | 2016 | +2.50 | low | 84 | +1.06 | +63509.00 | 633 | +100.33 | +1.19 | \-1.59 | \-134941.00 | 288 | \-468.55 | +0.76 |
-| 18 | close\_vs\_sma200 | 2016 | +2.50 | low | 12 | +1.05 | +27004.00 | 482 | +56.02 | +1.22 | \-0.15 | \-7865.00 | 259 | \-30.37 | +0.97 |
-| 19 | aroon\_up\_25 | 6048 | +1.50 | high | 84 | +1.04 | +32603.00 | 158 | +206.35 | +1.50 | +2.63 | +162726.00 | 186 | +874.87 | +1.77 |
-| 20 | macd\_hist\_pct | 2016 | +2.50 | low | 84 | +1.02 | +51906.00 | 440 | +117.97 | +1.22 | \-0.71 | \-53603.00 | 196 | \-273.48 | +0.87 |
-| 21 | upper\_shadow\_pct | 6048 | +2.50 | high | 84 | +1.01 | +59608.00 | 962 | +61.96 | +1.14 | \-0.78 | \-64663.00 | 417 | \-155.07 | +0.89 |
-| 22 | donchian\_pos | 6048 | +1.50 | low | 84 | +0.99 | +74047.00 | 1530 | +47.68 | +1.11 | \-0.07 | \-7065.00 | 667 | \-8.94 | +0.99 |
-| 23 | close\_vs\_ema200 | 6048 | +1.50 | high | 84 | +0.99 | +57596.00 | 615 | +93.65 | +1.19 | +1.16 | +96337.00 | 261 | +369.11 | +1.24 |
-| 24 | close\_vs\_ema200\_pct | 6048 | +1.50 | high | 84 | +0.99 | +57596.00 | 615 | +93.65 | +1.19 | +1.16 | +96337.00 | 261 | +369.11 | +1.24 |
-| 25 | minus\_di\_14 | 6048 | +2.50 | high | 84 | +0.97 | +45158.00 | 415 | +108.81 | +1.22 | \-1.94 | \-131460.00 | 166 | \-791.93 | +0.64 |
+| rank | factor | win | thr | long_when | hold | is_sharpe | is_pnl | is_trades | is_avg_usd | is_pf | oos_sharpe | oos_pnl | oos_trades | oos_avg_usd | oos_pf |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | aroon_up_25 | 6048 | +1.50 | high | 12 | +2.24 | +31037.00 | 292 | +106.29 | +1.67 | +0.61 | +18514.00 | 202 | +91.65 | +1.12 |
+| 2 | atr_28_pct | 2016 | +1.50 | low | 84 | +1.65 | +64012.00 | 393 | +162.88 | +1.35 | +1.25 | +74232.00 | 207 | +358.61 | +1.33 |
+| 3 | bb_squeeze | 6048 | +2.50 | high | 84 | +1.55 | +60920.00 | 424 | +143.68 | +1.32 | +0.67 | +31519.00 | 169 | +186.50 | +1.18 |
+| 4 | natr_14 | 2016 | +1.50 | low | 84 | +1.37 | +58204.00 | 460 | +126.53 | +1.26 | +0.66 | +39646.00 | 217 | +182.70 | +1.14 |
+| 5 | macd_hist_pct | 2016 | +1.50 | low | 84 | +1.37 | +73018.00 | 799 | +90.19 | +1.20 | +0.14 | +9789.00 | 369 | +29.12 | +1.02 |
+| 6 | close_vs_ema9 | 2016 | +2.50 | high | 12 | +1.37 | +46292.00 | 1050 | +44.70 | +1.17 | -1.16 | -56771.00 | 433 | -132.60 | +0.84 |
+| 7 | bb_squeeze | 2016 | +2.50 | high | 84 | +1.36 | +53593.00 | 435 | +123.20 | +1.28 | +0.67 | +32083.00 | 177 | +181.26 | +1.17 |
+| 8 | close_vs_ema12 | 2016 | +2.50 | high | 12 | +1.27 | +41741.00 | 960 | +43.48 | +1.16 | -1.47 | -69678.00 | 401 | -173.76 | +0.80 |
+| 9 | di_ratio | 2016 | +1.50 | high | 84 | +1.25 | +53414.00 | 659 | +79.22 | +1.19 | +2.54 | +95977.00 | 249 | +390.30 | +1.58 |
+| 10 | close_vs_wma20 | 2016 | +2.50 | low | 84 | +1.24 | +57051.00 | 507 | +112.53 | +1.22 | -0.35 | -21387.00 | 218 | -98.11 | +0.93 |
+| 11 | macd_hist_pct | 6048 | +2.50 | low | 84 | +1.23 | +50075.00 | 362 | +138.33 | +1.26 | -0.55 | -32010.00 | 162 | -197.59 | +0.86 |
+| 12 | linreg_slope_20 | 2016 | +2.50 | low | 84 | +1.22 | +45220.00 | 316 | +143.10 | +1.30 | -2.18 | -115508.00 | 138 | -837.01 | +0.51 |
+| 13 | close_vs_sma10 | 2016 | +2.50 | high | 12 | +1.20 | +39922.00 | 1000 | +40.57 | +1.16 | -1.08 | -51404.00 | 411 | -126.64 | +0.85 |
+| 14 | di_ratio | 6048 | +1.50 | high | 84 | +1.18 | +50243.00 | 653 | +76.94 | +1.18 | +2.92 | +109644.00 | 250 | +438.58 | +1.71 |
+| 15 | close_vs_sma10 | 2016 | +2.50 | low | 84 | +1.16 | +54764.00 | 549 | +99.59 | +1.20 | -0.81 | -50303.00 | 231 | -217.38 | +0.85 |
+| 16 | gap_pct | 6048 | +1.50 | low | 84 | +1.15 | +28986.00 | 203 | +142.79 | +1.35 | +0.67 | +33654.00 | 113 | +297.82 | +1.23 |
+| 17 | hv_96 | 6048 | +2.50 | low | 12 | +1.14 | +21193.00 | 293 | +72.33 | +1.27 | +1.24 | +55477.00 | 192 | +288.94 | +1.30 |
+| 18 | macd_hist_pct | 2016 | +2.50 | low | 84 | +1.13 | +44874.00 | 362 | +123.96 | +1.25 | +0.16 | +9130.00 | 166 | +55.00 | +1.04 |
+| 19 | di_ratio | 6048 | +2.50 | high | 84 | +1.12 | +38502.00 | 401 | +96.01 | +1.23 | +2.15 | +61781.00 | 147 | +420.28 | +1.69 |
+| 20 | atr_28_pct | 6048 | +2.50 | low | 12 | +1.12 | +23824.00 | 334 | +71.33 | +1.25 | +1.32 | +61116.00 | 196 | +311.82 | +1.27 |
+| 21 | close_vs_wma20 | 6048 | +2.50 | high | 12 | +1.10 | +36236.00 | 890 | +40.71 | +1.15 | -0.96 | -48689.00 | 418 | -116.48 | +0.86 |
+| 22 | candle_body_pct | 6048 | +1.50 | high | 84 | +1.10 | +66333.00 | 1314 | +50.54 | +1.12 | -1.82 | -140403.00 | 576 | -243.88 | +0.80 |
+| 23 | hv_96 | 2016 | +1.50 | low | 84 | +1.10 | +36794.00 | 289 | +127.31 | +1.28 | +1.02 | +56878.00 | 159 | +357.72 | +1.30 |
+| 24 | kc_pos | 6048 | +2.50 | low | 84 | +1.09 | +46323.00 | 508 | +91.19 | +1.20 | -0.43 | -23698.00 | 220 | -107.72 | +0.92 |
+| 25 | close_vs_ema12 | 2016 | +2.50 | low | 84 | +1.06 | +49534.00 | 531 | +93.28 | +1.18 | -0.57 | -35445.00 | 229 | -154.78 | +0.89 |
 
-Full grid: `report/factor_grid_results.csv` (800 configs). Columns `is_*`/`oos_*` are in/out-of-sample; `pnl` in USD on 100 oz; `avg_usd` = average NET PnL per trade after the $16 cost hurdle.
+Full grid: `report/factor_grid_results.csv` (864 configs). Columns `is_*`/`oos_*` are in/out-of-sample; `pnl` in USD on 100 oz; `avg_usd` = average NET PnL per trade after the $16 cost hurdle.
 
 ## Engine confirmation (top configs, full sample)
 
-| config | engine\_pnl | engine\_trades | engine\_pf | engine\_costs | fast\_pnl | delta | is\_sharpe | oos\_sharpe | oos\_pnl |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| upper\_shadow\_pct | W6048 T1.5 long@high H84 | +64929.00 | 2261 | +1.04 | +36176.00 | +64929.00 | +0.00 | +1.63 | \-0.57 |
-| hl\_range\_pct | W6048 T1.5 long@high H84 | \-12074.00 | 1446 | +0.99 | +23136.00 | \-12074.00 | +0.00 | +1.52 | \-1.23 |
-| gap\_pct | W6048 T1.5 long@low H84 | +87606.00 | 338 | +1.31 | +5408.00 | +87606.00 | +0.00 | +1.51 | +0.54 |
-| tr\_pct | W6048 T1.5 long@high H84 | \-17505.00 | 1432 | +0.99 | +22912.00 | \-17505.00 | +0.00 | +1.49 | \-1.26 |
-| lower\_shadow\_pct | W2016 T1.5 long@high H84 | +14935.00 | 2285 | +1.01 | +36560.00 | +14935.00 | +0.00 | +1.47 | \-0.95 |
-| aroon\_up\_25 | W6048 T1.5 long@high H12 | +73889.00 | 833 | +1.21 | +13328.00 | +73889.00 | +0.00 | +1.46 | +1.08 |
+| config | engine_pnl | engine_trades | engine_pf | engine_costs | fast_pnl | delta | is_sharpe | oos_sharpe | oos_pnl |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| aroon_up_25 | W6048 T1.5 long@high H12 | +49551.00 | 494 | +1.25 | +7904.00 | +49551.00 | +0.00 | +2.24 | +0.61 | +18514.00 |
+| atr_28_pct | W2016 T1.5 long@low H84 | +138244.00 | 600 | +1.34 | +9600.00 | +138244.00 | +0.00 | +1.65 | +1.25 | +74232.00 |
+| bb_squeeze | W6048 T2.5 long@high H84 | +92439.00 | 593 | +1.25 | +9488.00 | +92439.00 | +0.00 | +1.55 | +0.67 | +31519.00 |
+| natr_14 | W2016 T1.5 long@low H84 | +97850.00 | 677 | +1.20 | +10832.00 | +97850.00 | +0.00 | +1.37 | +0.66 | +39646.00 |
+| macd_hist_pct | W2016 T1.5 long@low H84 | +82807.00 | 1168 | +1.10 | +18688.00 | +82807.00 | +0.00 | +1.37 | +0.14 | +9789.00 |
+| close_vs_ema9 | W2016 T2.5 long@high H12 | -10479.00 | 1483 | +0.98 | +23728.00 | -10479.00 | +0.00 | +1.37 | -1.16 | -56771.00 |
 
 ## Decile profiles (fwd 7h return in bp, IS quantile bins applied to both segments)
 
-**clv** (monthly-IC t = -2.55, IS spr = -0.00277, OOS spr = -0.00248)
+
+**upper_shadow_pct** (monthly-IC t = 3.13, IS spr = 0.00947, OOS spr = 0.00294)
 
 | bin | IS | OOS |
-| --- | --- | --- |
-| +1.00 | +4.38 | +1.89 |
-| +2.00 | +4.46 | +1.54 |
-| +3.00 | +4.90 | +0.53 |
-| +4.00 | +5.11 | \-0.72 |
-| +5.00 | +4.43 | +1.90 |
-| +6.00 | +4.92 | \-0.20 |
-| +7.00 | +5.22 | +2.08 |
-| +8.00 | +4.62 | +0.45 |
-| +9.00 | +4.12 | +1.56 |
-| +10.00 | +4.26 | +0.14 |
+|---:|---:|---:|
+| +1.00 | +3.59 | +8.62 |
+| +2.00 | +2.62 | +5.34 |
+| +3.00 | +3.38 | +7.11 |
+| +4.00 | +3.70 | +6.64 |
+| +5.00 | +3.23 | +6.85 |
+| +6.00 | +4.83 | +9.06 |
+| +7.00 | +5.38 | +7.34 |
+| +8.00 | +4.02 | +5.66 |
+| +9.00 | +4.16 | +8.44 |
+| +10.00 | +4.31 | +7.80 |
 
-**upper\_shadow\_pct** (monthly-IC t = 2.32, IS spr = 0.00657, OOS spr = 0.00436)
 
-| bin | IS | OOS |
-| --- | --- | --- |
-| +1.00 | +4.23 | +3.36 |
-| +2.00 | +3.88 | \-2.33 |
-| +3.00 | +4.35 | +0.05 |
-| +4.00 | +4.31 | +1.05 |
-| +5.00 | +3.98 | +0.59 |
-| +6.00 | +5.51 | +2.03 |
-| +7.00 | +5.96 | +0.76 |
-| +8.00 | +4.57 | +0.62 |
-| +9.00 | +4.87 | +3.14 |
-| +10.00 | +4.77 | +0.39 |
-
-**kdj\_k** (monthly-IC t = -1.66, IS spr = -0.0036, OOS spr = -0.00286)
+**clv** (monthly-IC t = -2.17, IS spr = -0.00294, OOS spr = -0.00685)
 
 | bin | IS | OOS |
-| --- | --- | --- |
-| +1.00 | +5.03 | +0.24 |
-| +2.00 | +4.59 | +2.26 |
-| +3.00 | +4.45 | \-0.31 |
-| +4.00 | +4.30 | +1.39 |
-| +5.00 | +4.27 | \-0.31 |
-| +6.00 | +4.28 | +2.04 |
-| +7.00 | +5.16 | +0.89 |
-| +8.00 | +5.16 | +2.25 |
-| +9.00 | +4.42 | +1.32 |
-| +10.00 | +4.79 | \-0.79 |
+|---:|---:|---:|
+| +1.00 | +3.36 | +9.68 |
+| +2.00 | +3.96 | +6.81 |
+| +3.00 | +4.25 | +6.54 |
+| +4.00 | +4.33 | +6.74 |
+| +5.00 | +3.61 | +8.47 |
+| +6.00 | +4.19 | +6.61 |
+| +7.00 | +4.78 | +7.46 |
+| +8.00 | +3.97 | +7.42 |
+| +9.00 | +3.39 | +7.00 |
+| +10.00 | +3.38 | +6.11 |
 
-**kdj\_d** (monthly-IC t = -1.64, IS spr = -0.00394, OOS spr = -0.00443)
 
-| bin | IS | OOS |
-| --- | --- | --- |
-| +1.00 | +5.10 | +1.23 |
-| +2.00 | +4.33 | +1.93 |
-| +3.00 | +4.22 | \-0.15 |
-| +4.00 | +4.59 | +0.79 |
-| +5.00 | +4.37 | \-0.31 |
-| +6.00 | +4.29 | +1.32 |
-| +7.00 | +5.03 | +1.21 |
-| +8.00 | +5.62 | +1.95 |
-| +9.00 | +4.97 | +2.58 |
-| +10.00 | +3.93 | \-1.43 |
-
-**kdj\_j** (monthly-IC t = -1.63, IS spr = -0.00197, OOS spr = -0.00081)
+**tr_pct** (monthly-IC t = -1.83, IS spr = -0.00938, OOS spr = 0.02784)
 
 | bin | IS | OOS |
-| --- | --- | --- |
-| +1.00 | +5.33 | \-0.27 |
-| +2.00 | +4.88 | +1.99 |
-| +3.00 | +4.36 | +0.36 |
-| +4.00 | +4.28 | \-0.38 |
-| +5.00 | +3.92 | +1.67 |
-| +6.00 | +4.81 | +2.27 |
-| +7.00 | +4.20 | +2.47 |
-| +8.00 | +4.26 | +0.46 |
-| +9.00 | +5.59 | +0.82 |
-| +10.00 | +4.83 | \-0.50 |
+|---:|---:|---:|
+| +1.00 | +6.07 | +6.61 |
+| +2.00 | +4.64 | +6.48 |
+| +3.00 | +4.85 | +9.98 |
+| +4.00 | +4.05 | +9.96 |
+| +5.00 | +4.27 | +9.40 |
+| +6.00 | +3.50 | +9.17 |
+| +7.00 | +4.13 | +9.34 |
+| +8.00 | +4.05 | +7.26 |
+| +9.00 | +3.52 | +5.95 |
+| +10.00 | +0.16 | +4.60 |
+
+
+**hl_range_pct** (monthly-IC t = -1.82, IS spr = -0.00927, OOS spr = 0.02777)
+
+| bin | IS | OOS |
+|---:|---:|---:|
+| +1.00 | +6.08 | +6.53 |
+| +2.00 | +4.66 | +6.44 |
+| +3.00 | +4.80 | +9.96 |
+| +4.00 | +4.02 | +10.03 |
+| +5.00 | +4.26 | +9.46 |
+| +6.00 | +3.58 | +8.99 |
+| +7.00 | +4.04 | +9.42 |
+| +8.00 | +4.05 | +7.34 |
+| +9.00 | +3.62 | +6.04 |
+| +10.00 | +0.13 | +4.52 |
+
+
+**hv_20** (monthly-IC t = -1.64, IS spr = -0.01002, OOS spr = 0.03421)
+
+| bin | IS | OOS |
+|---:|---:|---:|
+| +1.00 | +6.60 | +7.71 |
+| +2.00 | +4.27 | +8.91 |
+| +3.00 | +5.50 | +8.62 |
+| +4.00 | +6.42 | +7.85 |
+| +5.00 | +3.69 | +7.20 |
+| +6.00 | +3.62 | +6.19 |
+| +7.00 | +0.40 | +9.80 |
+| +8.00 | +1.50 | +9.69 |
+| +9.00 | +3.49 | +8.26 |
+| +10.00 | +3.77 | +4.04 |
 
 ## Caveats
 
--   **Multiple testing**: 800 IS configurations were ranked; the best IS Sharpe is inflated by selection. The OOS columns are the honest check (same sign & similar magnitude = robust).
--   IC uses overlapping forward returns (monthly blocks mitigate but do not eliminate cross-correlation); treat |t| < 3 as noise given ~27 IS months.
--   Rolling z-scores need a warm-up (min\_periods = W/2); early IS bars are inactive for some configs.
--   22 holiday flat candles produce structural NaNs in 4 factors; NaN never generates entries (comparisons with NaN are False).
--   No volume data exists on [Gate.io](http://Gate.io) TradFi klines; volume factors out of scope.
--   Margin/leverage not modeled (fixed 100 oz ~ 2.6x notional on $100k).
+- **Multiple testing**: 864 IS configurations were ranked; the best IS Sharpe is inflated by selection. The OOS columns are the honest check (same sign & similar magnitude = robust).
+- IC uses overlapping forward returns (monthly blocks mitigate but do not eliminate cross-correlation); treat |t| < 3 as noise given ~27 IS months.
+- Rolling z-scores need a warm-up (min_periods = W/2); early IS bars are inactive for some configs.
+- 22 holiday flat candles produce structural NaNs in 4 factors; NaN never generates entries (comparisons with NaN are False).
+- No volume data exists on Gate.io TradFi klines; volume factors out of scope.
+- Margin/leverage not modeled (fixed 100 oz ~ 2.6x notional on $100k).

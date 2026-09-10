@@ -2,6 +2,8 @@
 
 > XAUUSD (Gold) CFD quantitative research — 3 years of 5-minute OHLC data (211k bars) from Gate.io TradFi API, volatility / risk / seasonality analysis, a **64-indicator dataset** (no-lookahead verified), and a **cost-aware event-driven backtest framework** for intraday strategy development.
 
+> **Research-status revision (2026-09-10):** 2026-03-10 → 2026-09-09 is a consumed development set, not an untouched holdout. Historical candidate claims and pre-revision reports are archived; the current single-account implementation is a development candidate only. A new judgment set requires six months of new continuous data.
+
 [中文说明](#中文说明) | [English](#english)
 
 ---
@@ -53,8 +55,8 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 
 | strategy | return | Sharpe | PF | win rate | trades | friction paid |
 |---|---:|---:|---:|---:|---:|---:|
-| EMA cross 9/21 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
-| Donchian breakout 20 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
+| EMA cross 9/21 | **+51.6%** | 0.23 | 1.02 | 29.1% | 9,323 | $149k |
+| Donchian breakout 20 | −44.5% | −0.19 | 0.98 | 35.0% | 5,221 | $84k |
 
 > Key lesson: at 100 oz each round trip costs **$16** → 10 trades/day ≈ $160/day
 > ≈ $58k/year of friction on $100k capital. Any intraday edge must clear this
@@ -65,10 +67,10 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 | | |
 |---|---|
 | Stage 1 — IC + grid | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — Spearman IC with monthly Newey-West t-stats over all 64 indicators, then a per-factor z-score grid (window W × threshold T × hold H) with IS/OOS 70/30 split and the $16/trade cost gate |
-| Stage 2 — combos + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — **one-sided** re-test + pairwise AND combos, ranked by 4-fold walk-forward (expanding train, 6-month test windows); the final 6 months (2026-03-10 → 2026-09-09) are **sealed as an untouchable holdout** |
+| Stage 2 — combos + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — one-sided re-test and pairwise combos ranked by expanding walk-forward. The last six months are now a consumed development set, not a final test. |
 | Reports | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
 
-**Locked candidate (engine-verified, replay delta $0.00)** — research slice 2023-09 → 2026-03:
+**Historical candidate (superseded)** — research slice 2023-09 → 2026-03:
 
 | spec | side | res Sharpe | avg $/trade | trades | res maxDD |
 |---|---|---:|---:|---:|---:|
@@ -88,7 +90,7 @@ Full-pool WF simulation (540 configs, re-picked each fold by train Sharpe): Shar
 - Exploratory (not locked): `aroon_up_25` short (z<−1.5, W6048) — res Sharpe 1.42,
   +$724/trade, 170 trades, positive in all 4 folds.
 
-Judgement day — run the locked spec against the sealed holdout **once**, after research is frozen:
+After six months of newly accumulated data, freeze a new judgment segment and run the pre-locked single-account specification once:
 
 ```bash
 python scripts/run_combo_matrix.py --final
@@ -219,8 +221,8 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 
 | 策略 | 收益 | Sharpe | PF | 胜率 | 笔数 | 摩擦成本 |
 |---|---:|---:|---:|---:|---:|---:|
-| EMA 9/21 交叉 | **+51.6%** | 0.50 | 1.02 | 29.1% | 9,323 | $149k |
-| 唐奇安20突破 | −44.5% | −0.52 | 0.98 | 35.0% | 5,221 | $84k |
+| EMA 9/21 交叉 | **+51.6%** | 0.23 | 1.02 | 29.1% | 9,323 | $149k |
+| 唐奇安20突破 | −44.5% | −0.19 | 0.98 | 35.0% | 5,221 | $84k |
 
 > 关键教训:100盎司下每笔往返成本**$16** → 每天10笔 ≈ $160/天 ≈ 每年$58k(本金$100k)。日内策略的边际收益必须先跨过这道门槛——这正是下一步特征筛选要量化的东西。
 
@@ -229,10 +231,10 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 | | |
 |---|---|
 | 第一阶段 — IC + 网格 | [`scripts/run_screening.py`](scripts/run_screening.py) · [`analysis/factor_screening.py`](analysis/factor_screening.py) — 64个指标的 Spearman IC(月度 Newey-West t 检验)+ 单因子 z 分数网格(窗口 W × 阈值 T × 持仓 H),IS/OOS 七三分割,$16/笔成本门槛 |
-| 第二阶段 — 组合 + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — **单边**复测 + 两两 AND 组合,按 4 折 walk-forward(扩张训练窗、6个月测试窗)排序;最后6个月(2026-03-10 → 2026-09-09)**封存为终审数据,研究期间禁止触碰** |
+| 第二阶段 — 组合 + WF | [`scripts/run_combo_matrix.py`](scripts/run_combo_matrix.py) · [`analysis/combo_screening.py`](analysis/combo_screening.py) — 单边复测与两两组合，按扩张 walk-forward 排序；最后6个月现为已消费的开发集，不是终审数据。 |
 | 报告 | [`report/factor_screening.md`](report/factor_screening.md) · [`report/combo_matrix.md`](report/combo_matrix.md) · `factor_ic_results.csv` · `factor_grid_results.csv` · `combo_wf_results.csv` |
 
-**锁定候选(引擎逐笔复核,重放误差 $0.00)** — 研究切片 2023-09 → 2026-03:
+**历史候选（已被修订流程取代）** — 研究切片 2023-09 → 2026-03:
 
 | 规格 | 方向 | 研究Sharpe | 均$/笔 | 笔数 | 研究最大回撤 |
 |---|---|---:|---:|---:|---:|
@@ -247,7 +249,7 @@ python scripts/run_backtest.py --strategy donchian_breakout_20 --sl 5.0 --tp 8.0
 - 两两组合**冗余**:`aroon ∧ plus_di` 在 T=1.25 时保留 plus_di 单独交易的 89–96%,Sharpe 还略低;T=1.5 时重叠骤降到 <6%(笔数太少)。
 - 探索性(未锁定):`aroon_up_25` 做空(z<−1.5, W6048)— 研究Sharpe 1.42,+$724/笔,170笔,4折全正。
 
-审判日 — 研究冻结后,对封存数据运行锁定规格**一次**:
+积累至少六个月新数据后，冻结新的判决区，再对预锁定的单账户规格只运行一次：
 
 ```bash
 python scripts/run_combo_matrix.py --final

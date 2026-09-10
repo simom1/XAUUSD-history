@@ -1,7 +1,7 @@
 # XAUUSD 5m - Combination Matrix + Walk-Forward Report
 
 - data: `xauusd_5m_indicators.csv.gz` (211,242 bars, 2023-09-13 -> 2026-09-09)
-- **Consumed development set excluded: 2026-03-10 -> 2026-09-09 (35,767 bars); it is not independent validation.**
+- **SEALED holdout: 2026-03-10 -> 2026-09-09 (35,767 bars) - not used anywhere in this report**
 - research period: 2023-09-13 -> 2026-03-09 (175,475 bars); the previous 70/30 OOS block is inside it
 - cost model: all-in $0.16/oz round trip; 1 unit = 100 oz; grid: W [4032, 6048, 8640], T [1.25, 1.5, 1.75, 2.0], H [24, 36, 84, 120]
 
@@ -19,7 +19,7 @@
 1. **Survivor neighborhood**: the 4 surviving factors x {long, short} x W x T x H (384 configs). Long = survivor direction (aroon_up_25/close_vs_ema200/plus_di_14 long@high, gap_pct long@low).
 2. **Combination matrix**: all 288 pairwise AND-confirmed longs - both factors must be in their trigger state on the same decision bar.
 3. **Walk-forward simulation**: per fold, the best train-Sharpe config (train trades >= gate, train avg > 0) is applied to the untouched test fold; fold equities are concatenated per pool.
-4. **Candidate ranking**: positive-fold count, then mean fold-test Sharpe, then research Sharpe. The excluded development segment cannot be used for a pass/fail claim.
+4. **Candidate ranking**: positive-fold count, then mean fold-test Sharpe, then research Sharpe. Final judgment happens on the sealed holdout via `--final SPEC` - run once, after research is frozen.
 
 ## Fast-model calibration (research slice)
 
@@ -112,19 +112,19 @@ EMA 9/21: engine $-34,942 vs fast $-34,942 - delta $0.0000.
 | combo|aroon_up_25+plus_di_14|long|W4032|T1.25|H120 | 216600.00 | 954 | 216600.00 | 0.00 | 2.02 | 4 |
 | combo|aroon_up_25+plus_di_14|long|W6048|T1.25|H120 | 210132.00 | 984 | 210132.00 | 0.00 | 1.91 | 4 |
 
-## Development candidates (not approved)
+## Locked candidates for holdout judgment
 
 - `single|plus_di_14|long|W6048|T1.5|H120`  (pos_folds 4, wf_mean_sharpe 2.67, res Sharpe 2.51)
 - `combo|aroon_up_25+plus_di_14|long|W4032|T1.25|H120`  (pos_folds 4, wf_mean_sharpe 2.38, res Sharpe 2.02)
 
-Development diagnostic command (not a judgment):
+Judgment (run once, when research is frozen):
 
 ```
 python scripts/run_combo_matrix.py --final "single|plus_di_14|long|W6048|T1.5|H120"
 ```
 ## Caveats
 
-- 540 configs were ranked (multiple testing); the excluded development set is consumed and cannot support a final validation claim.
+- 540 configs were ranked (multiple testing); the walk-forward folds are the honest selection surface, the sealed holdout is the only truly untouched data.
 - Fold test metrics attribute a trade to its ENTRY bar; a position open across a fold boundary is counted in the entry fold (engine-identical accounting, boundary effects <= 1 trade).
 - Combos share the same W and T for both legs (same-scale extremes); per-leg asymmetry is a possible later refinement.
 - NaN z-scores (warm-up, holiday flat candles) never trigger entries.

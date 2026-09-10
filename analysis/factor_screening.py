@@ -92,6 +92,18 @@ def build_factors(df: pd.DataFrame) -> pd.DataFrame:
         F[k] = df[k]
     _reg("statistical/micro (14)", stat)
 
+    # composite factors (Phase 4)
+    comp = ["di_spread", "aroon_osc", "di_ratio", "bb_squeeze", "vol_percentile"]
+    F["di_spread"] = df["plus_di_14"] - df["minus_di_14"]
+    F["aroon_osc"] = df["aroon_up_25"] - df["aroon_down_25"]
+    mdi = df["minus_di_14"].replace(0.0, np.nan)
+    F["di_ratio"] = (df["plus_di_14"] / mdi).clip(-10, 10)
+    bw = df["bb_width"]
+    F["bb_squeeze"] = ((bw - bw.rolling(96, min_periods=48).mean()) /
+                       bw.rolling(96, min_periods=48).std().replace(0.0, np.nan))
+    F["vol_percentile"] = df["natr_14"].rolling(96, min_periods=48).rank(pct=True) * 100.0
+    _reg("composite (5)", comp)
+
     return F
 
 
@@ -147,6 +159,11 @@ def pnl_from_path(pos: np.ndarray, o: np.ndarray, c: np.ndarray,
         fe = np.flatnonzero(flat & (pos != 0.0))
         fe = fe[fe + 1 < n]
         B[fe + 1] += -pos[fe] * (o[fe + 1] - c[fe])
+    # BacktestEngine force-closes any remaining terminal position at the last
+    # close.  The mark-to-close gain is already present above; charge its final
+    # exit side so a dataset that ends before the session cutoff still matches.
+    if pos[-1] != 0.0:
+        B[-1] -= cost_side * abs(pos[-1])
     return B
 
 

@@ -45,21 +45,21 @@ def synthetic_pnl_check(verbose: bool = True) -> None:
     assert abs(t["net_pnl"] - (-200.0)) < 1e-9, t["net_pnl"]
     assert abs(r.equity[-1] - (100_000 - 200)) < 1e-9
 
-    # --- TP: SL/TP = 1.0; long filled 100.2 (open b1), b2 high 102 >= 101.2 -> TP
+    # --- TP: exit at bar low under the deliberately conservative OHLC rule.
     eng2 = BacktestEngine(BacktestConfig(round_trip_cost_usd=0,
                                          intraday_only=False,
                                          stop_loss_usd=1.0, take_profit_usd=1.0))
     r = eng2.run(df, np.array([100, 100, 0, 0], float))
     t = r.trades.iloc[0]
-    assert t["exit_reason"] == "take_profit" and abs(t["exit_px"] - 101.2) < 1e-9
-    assert abs(t["net_pnl"] - 100.0) < 1e-9
+    assert t["exit_reason"] == "take_profit" and abs(t["exit_px"] - 100.8) < 1e-9
+    assert abs(t["net_pnl"] - 60.0) < 1e-9
 
     # --- stop priority: bar touching BOTH SL and TP levels -> stop first
     df2 = _mk_df([(100, 100.5, 99.5, 100.2), (100.2, 101, 100, 101),
                   (101, 102, 99.0, 100.5), (103, 103.5, 102.5, 103)])
     r = eng2.run(df2, np.array([100, 100, 0, 0], float))
     t = r.trades.iloc[0]
-    assert t["exit_reason"] == "stop_loss" and abs(t["exit_px"] - 99.2) < 1e-9
+    assert t["exit_reason"] == "stop_loss" and abs(t["exit_px"] - 99.0) < 1e-9
 
     # --- friction: 1.4/oz round-trip -> 0.7/oz/side
     eng3 = BacktestEngine(BacktestConfig(round_trip_cost_usd=1.4,
@@ -85,22 +85,29 @@ def synthetic_pnl_check(verbose: bool = True) -> None:
 def prefix_consistency_check(
     engine: BacktestEngine,
     df: pd.DataFrame,
-    target_oz: np.ndarray,
+    strategy,
     warmup_bars: int = 0,
     frac: float = 0.8,
     verbose: bool = True,
 ) -> bool:
-    """No-lookahead check: replay on a truncated prefix; every trade that fully
-    closed before the cut and the whole equity path must match the full run.
+    """Rebuild targets on a prefix and compare the common completed history.
 
-    If a strategy peeked at future bars, its decisions near the boundary would
-    differ between the two runs.
+    ``strategy`` must expose ``targets(df)`` or be a callable accepting a
+    dataframe.  Recomputing it is the crucial difference from replaying a
+    precomputed target array: a future-reading strategy changes at the cut.
     """
     k = int(len(df) * frac)
-    r_full = engine.run(df, target_oz, warmup_bars)
-    r_pre = engine.run(df.iloc[:k].reset_index(drop=True), target_oz[:k], warmup_bars)
+    make_targets = strategy.targets if hasattr(strategy, "targets") else strategy
+    full_targets = np.asarray(make_targets(df), dtype=float)
+    prefix = df.iloc[:k].reset_index(drop=True)
+    prefix_targets = np.asarray(make_targets(prefix), dtype=float)
+    targets_match = np.array_equal(full_targets[:k], prefix_targets)
+    r_full = engine.run(df, full_targets, warmup_bars)
+    r_pre = engine.run(prefix, prefix_targets, warmup_bars)
 
-    ok = np.array_equal(r_full.equity[:k], r_pre.equity[:k])
+    # The prefix's final bar is legitimately force-closed by the engine, so
+    # compare only bars that are complete in both runs.
+    ok = np.array_equal(r_full.equity[:k - 1], r_pre.equity[:k - 1])
     cols = ["entry_i", "exit_i", "side", "oz", "entry_px", "exit_px", "net_pnl", "exit_reason"]
     t_full = r_full.trades
     t_pre = r_pre.trades
@@ -112,7 +119,7 @@ def prefix_consistency_check(
         t_full.empty or t_full.equals(t_pre)
     )
     if verbose:
-        status = "PASS" if (ok and same_trades) else "FAIL"
-        print(f"prefix_consistency_check (first {frac:.0%}): {status} "
-              f"[{len(t_pre)} overlapping trades, equity bit-identical: {ok}]")
-    return bool(ok and same_trades)
+        status = "PASS" if (targets_match and ok and same_trades) else "FAIL"
+        print(f"prefix_consistency_check (recomputed first {frac:.0%}): {status} "
+              f"[{len(t_pre)} overlapping trades, targets identical: {targets_match}, equity bit-identical: {ok}]")
+    return bool(targets_match and ok and same_trades)

@@ -68,17 +68,22 @@ def main() -> None:
     ap.add_argument("--top", type=int, default=25)
     ap.add_argument("--confirm", type=int, default=6)
     ap.add_argument("--skip-confirm", action="store_true")
+    ap.add_argument("--research-end", default="2026-03-10",
+                    help="exclusive UTC date; later data is development-only")
     args = ap.parse_args()
 
     t0 = time.perf_counter()
     print(f"loading {DATA.name} ...")
-    df = pd.read_csv(DATA)
+    df_all = pd.read_csv(DATA)
+    cutoff = pd.Timestamp(args.research_end, tz="UTC").timestamp()
+    df = df_all[df_all["timestamp"] < cutoff].reset_index(drop=True)
     n = len(df)
     ts_sec = df["timestamp"].to_numpy(dtype=np.int64)
     ts = pd.to_datetime(df["timestamp"], unit="s")
     o = df["open"].to_numpy(float)
     c = df["close"].to_numpy(float)
     is_end = int(n * args.is_frac)
+    print(f"research cutoff={args.research_end} (exclusive; later data is development-only)")
     print(f"bars={n:,}  IS=[0:{is_end:,}] {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[is_end]:%Y-%m-%d}"
           f"   OOS=[{is_end:,}:{n:,}] {ts.iloc[is_end]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d}")
     ses = Session(ts_sec)
@@ -231,6 +236,7 @@ def main() -> None:
     n_cfg = len(grid)
     L = []
     L.append("# XAUUSD 5m - Factor Screening Report\n")
+    L.append(f"> Research-only revision: {args.research_end} onward is excluded from selection and remains a consumed development set.\n")
     L.append(f"- data: `{DATA.name}` ({n:,} bars, {ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[-1]:%Y-%m-%d})")
     L.append(f"- IS/OOS split: first {args.is_frac:.0%} IS "
              f"({ts.iloc[0]:%Y-%m-%d} -> {ts.iloc[is_end]:%Y-%m-%d}), "
