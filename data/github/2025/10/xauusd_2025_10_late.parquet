@@ -1,0 +1,33 @@
+## 目录结构
+
+```
+data/
+├── 2024/
+│   ├── 01/
+│   │   └── xauusd_2024_01.parquet
+│   ├── 02/
+│   │   └── xauusd_2024_02.parquet
+│   └── ...
+├── 2025/
+│   ├── 01/
+│   │   └── xauusd_2025_01.parquet
+│   ├── 02/
+│   │   └── xauusd_2025_02.parquet
+│   ├── 10/
+│   │   ├── xauusd_2025_10_early.parquet  (1-10日)
+│   │   ├── xauusd_2025_10_mid.parquet    (11-20日)
+│   │   └── xauusd_2025_10_late.parquet   (21-31日)
+│   └── ...
+└── 2026/
+    ├── 01/
+    │   ├── xauusd_2026_01_early.parquet  (1-10日)
+    │   ├── xauusd_2026_01_mid.parquet    (11-20日)
+    │   └── xauusd_2026_01_late.parquet   (21-31日)
+    ├── 03/
+    │   ├── xauusd_2026_03_early.parquet  (1-10日)
+    │   ├── xauusd_2026_03_mid.parquet    (11-20日)
+    │   └── xauusd_2026_03_late.parquet   (21-31日)
+    └── ...
+```
+
+**注**: 大文件已按上/中/下旬拆分，单文件 < 100MB，方便上传 GitHub。
