@@ -1,0 +1,230 @@
+{
+  "source": "local Infinox MT5 terminal (C:/Program Files/MetaTrader 5)",
+  "account": "209131474",
+  "server": "InfinoxLimited-MT5Live",
+  "symbol": "XAUUSD",
+  "generated_at_utc": "2026-11-17T06:18:58+00:00",
+  "format": "parquet, zstd compression",
+  "timezone": "time_utc is true UTC via US-DST rule (+3 summer, +2 winter); time_server is the raw MT5 broker wall clock",
+  "coverage_notes": [
+    "D1 covers 2007-06-22 onward and is the longest series.",
+    "M5, M15 and M30 have true full granularity from 2018-09-14.",
+    "H1 and H4 have true full granularity from 2018-03-19.",
+    "Earlier broker rows are sparse daily snapshots (and hourly rows in the M30 archive) and are excluded so each file stays homogeneous.",
+    "tick_volume is the MT5 tick count; spread is in points; real_volume is 0 for this symbol.",
+    "The final bar of each file is the still-forming bar at extraction time."
+  ],
+  "files": {
+    "M5": {
+      "rows": 579531,
+      "first_utc": "2018-09-13T22:00:00+00:00",
+      "last_utc": "2026-11-17T06:10:00+00:00",
+      "first_server": "2018-09-14T01:00:00",
+      "last_server": "2026-11-17T08:10:00",
+      "compression": "ZSTD",
+      "duplicates": 0,
+      "monotonic": true,
+      "ohlc_violations": 0,
+      "nonpositive_prices": 0,
+      "median_bars_per_weekday": 276,
+      "thin_weekdays": 1,
+      "gaps_over_72h": 15,
+      "largest_gaps": [
+        {
+          "hours": 76.3,
+          "ends_utc": "2020-12-27 23:00:00+00:00"
+        },
+        {
+          "hours": 73.1,
+          "ends_utc": "2019-04-21 22:00:00+00:00"
+        },
+        {
+          "hours": 73.1,
+          "ends_utc": "2020-04-12 22:00:00+00:00"
+        }
+      ]
+    },
+    "M15": {
+      "rows": 193184,
+      "first_utc": "2018-09-13T22:00:00+00:00",
+      "last_utc": "2026-11-17T06:00:00+00:00",
+      "first_server": "2018-09-14T01:00:00",
+      "last_server": "2026-11-17T08:00:00",
+      "compression": "ZSTD",
+      "duplicates": 0,
+      "monotonic": true,
+      "ohlc_violations": 0,
+      "nonpositive_prices": 0,
+      "median_bars_per_weekday": 92,
+      "thin_weekdays": 1,
+      "gaps_over_72h": 15,
+      "largest_gaps": [
+        {
+          "hours": 76.5,
+          "ends_utc": "2020-12-27 23:00:00+00:00"
+        },
+        {
+          "hours": 73.2,
+          "ends_utc": "2019-04-21 22:00:00+00:00"
+        },
+        {
+          "hours": 73.2,
+          "ends_utc": "2020-04-12 22:00:00+00:00"
+        }
+      ]
+    },
+    "M30": {
+      "rows": 96609,
+      "first_utc": "2018-09-13T22:00:00+00:00",
+      "last_utc": "2026-11-17T06:00:00+00:00",
+      "first_server": "2018-09-14T01:00:00",
+      "last_server": "2026-11-17T08:00:00",
+      "compression": "ZSTD",
+      "duplicates": 0,
+      "monotonic": true,
+      "ohlc_violations": 0,
+      "nonpositive_prices": 0,
+      "median_bars_per_weekday": 46,
+      "thin_weekdays": 1,
+      "gaps_over_72h": 15,
+      "largest_gaps": [
+        {
+          "hours": 76.5,
+          "ends_utc": "2020-12-27 23:00:00+00:00"
+        },
+        {
+          "hours": 73.5,
+          "ends_utc": "2019-04-21 22:00:00+00:00"
+        },
+        {
+          "hours": 73.5,
+          "ends_utc": "2020-04-12 22:00:00+00:00"
+        }
+      ]
+    },
+    "H1": {
+      "rows": 51260,
+      "first_utc": "2018-03-18T21:00:00+00:00",
+      "last_utc": "2026-11-17T06:00:00+00:00",
+      "first_server": "2018-03-19T00:00:00",
+      "last_server": "2026-11-17T08:00:00",
+      "compression": "ZSTD",
+      "duplicates": 0,
+      "monotonic": true,
+      "ohlc_violations": 0,
+      "nonpositive_prices": 0,
+      "median_bars_per_weekday": 23,
+      "thin_weekdays": 1,
+      "gaps_over_72h": 16,
+      "largest_gaps": [
+        {
+          "hours": 77.0,
+          "ends_utc": "2020-12-27 23:00:00+00:00"
+        },
+        {
+          "hours": 74.0,
+          "ends_utc": "2018-04-01 22:00:00+00:00"
+        },
+        {
+          "hours": 74.0,
+          "ends_utc": "2019-04-21 22:00:00+00:00"
+        }
+      ]
+    },
+    "H4": {
+      "rows": 13406,
+      "first_utc": "2018-03-18T21:00:00+00:00",
+      "last_utc": "2026-11-17T06:00:00+00:00",
+      "first_server": "2018-03-19T00:00:00",
+      "last_server": "2026-11-17T08:00:00",
+      "compression": "ZSTD",
+      "duplicates": 0,
+      "monotonic": true,
+      "ohlc_violations": 0,
+      "nonpositive_prices": 0,
+      "median_bars_per_weekday": 6,
+      "thin_weekdays": 0,
+      "gaps_over_72h": 16,
+      "largest_gaps": [
+        {
+          "hours": 76.0,
+          "ends_utc": "2018-04-01 21:00:00+00:00"
+        },
+        {
+          "hours": 76.0,
+          "ends_utc": "2019-04-21 21:00:00+00:00"
+        },
+        {
+          "hours": 76.0,
+          "ends_utc": "2020-04-12 21:00:00+00:00"
+        }
+      ]
+    },
+    "D1": {
+      "rows": 5127,
+      "first_utc": "2007-06-21T21:00:00+00:00",
+      "last_utc": "2026-11-16T22:00:00+00:00",
+      "first_server": "2007-06-22T00:00:00",
+      "last_server": "2026-11-17T00:00:00",
+      "compression": "ZSTD",
+      "duplicates": 0,
+      "monotonic": true,
+      "ohlc_violations": 0,
+      "nonpositive_prices": 0,
+      "median_bars_per_weekday": 1,
+      "thin_weekdays": 0,
+      "gaps_over_72h": 44,
+      "largest_gaps": [
+        {
+          "hours": 96.0,
+          "ends_utc": "2009-12-27 22:00:00+00:00"
+        },
+        {
+          "hours": 96.0,
+          "ends_utc": "2010-01-03 22:00:00+00:00"
+        },
+        {
+          "hours": 96.0,
+          "ends_utc": "2015-12-27 22:00:00+00:00"
+        }
+      ]
+    }
+  },
+  "checks": {
+    "m5_vs_d1_daily_close": {
+      "days_checked": 2110,
+      "max_abs_diff": 0.24,
+      "mean_abs_diff": 0.0001,
+      "worst_days": [
+        {
+          "server_day": "2026-11-17",
+          "abs_diff": 0.24
+        },
+        {
+          "server_day": "2018-09-14",
+          "abs_diff": 0.0
+        },
+        {
+          "server_day": "2018-09-17",
+          "abs_diff": 0.0
+        }
+      ]
+    },
+    "week_opens": {
+      "sample_week_opens_utc": [
+        "2026-08-30 22:00:00+00:00",
+        "2026-09-06 22:00:00+00:00",
+        "2026-09-13 22:00:00+00:00",
+        "2026-09-20 22:00:00+00:00",
+        "2026-09-27 22:00:00+00:00",
+        "2026-10-04 22:00:00+00:00",
+        "2026-10-11 22:00:00+00:00",
+        "2026-10-18 22:00:00+00:00",
+        "2026-10-25 22:00:00+00:00",
+        "2026-11-01 23:00:00+00:00",
+        "2026-11-08 23:00:00+00:00",
+        "2026-11-15 23:00:00+00:00"
+      ]
+    }
+  }
+}
